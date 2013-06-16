@@ -16,16 +16,18 @@ type tables struct {
 	all  map[string]*table
 }
 
-func (me *tables) init(conn *conn) (err error) {
+func (me *tables) init(conn *conn, close bool) (err error) {
 	me.conn, me.all = conn, map[string]*table{}
-	if errs := uio.WalkFilesIn(conn.dir, func(filePath string) bool {
-		if strings.HasSuffix(strings.ToLower(filePath), FileExt) {
-			fn := filepath.Base(filePath)
-			_, err = me.get(fn[:len(fn)-len(FileExt)])
+	if !close {
+		if errs := uio.WalkFilesIn(conn.dir, func(filePath string) bool {
+			if strings.HasSuffix(strings.ToLower(filePath), FileExt) {
+				fn := filepath.Base(filePath)
+				_, err = me.get(fn[:len(fn)-len(FileExt)])
+			}
+			return err == nil
+		}); len(errs) > 0 && err == nil {
+			err = errs[0]
 		}
-		return err == nil
-	}); len(errs) > 0 && err == nil {
-		err = errs[0]
 	}
 	return
 }
@@ -86,7 +88,7 @@ func (me *table) insert(rec M) (res *result, err error) {
 func (me *table) persist() (err error) {
 	if me.conn.tx == nil {
 		var raw []byte
-		if raw, err = json.MarshalIndent(me.recs, "", "\t"); err == nil {
+		if raw, err = json.MarshalIndent(me.recs, "", " "); err == nil {
 			if err = uio.WriteBinaryFile(me.filePath, raw); err == nil {
 				me.lastLoad = time.Now()
 			}

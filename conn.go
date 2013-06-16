@@ -4,22 +4,20 @@ import (
 	"database/sql/driver"
 	"os"
 	"path/filepath"
-	"time"
 
 	uio "github.com/metaleap/go-util/io"
 )
 
 type conn struct {
-	drv      *drv
-	tx       *tx
-	initTime time.Time
-	dir      string
-	tables   tables
+	drv    *drv
+	tx     *tx
+	dir    string
+	tables tables
 }
 
 func newConn(drv *drv, dir string) (me *conn, err error) {
-	me = &conn{drv: drv, dir: dir, initTime: time.Now()}
-	err = me.tables.init(me)
+	me = &conn{drv: drv, dir: dir}
+	err = me.tables.init(me, false)
 	return
 }
 
@@ -65,6 +63,8 @@ func (me *conn) Begin() (tx driver.Tx, err error) {
 }
 
 func (me *conn) Close() (err error) {
+	me.tx = nil
+	me.tables.init(me, true)
 	return
 }
 

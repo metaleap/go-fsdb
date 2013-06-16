@@ -18,17 +18,18 @@ func (me *tx) Commit() (err error) {
 			err = e
 		}
 	}
+	me.conn, me.tables = nil, nil
 	return
 }
 
 func (me *tx) Rollback() (err error) {
 	var e error
 	me.conn.tx = nil
-	println("ROLLBACK")
 	for t, _ := range me.tables {
 		if e = t.reload(false); e != nil && err == nil {
 			err = e
 		}
 	}
+	me.conn, me.tables = nil, nil
 	return
 }

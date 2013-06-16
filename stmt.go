@@ -36,6 +36,7 @@ func newStmt(conn *conn, query string) (me *stmt, err error) {
 }
 
 func (me *stmt) Close() (err error) {
+	me.query = nil
 	return
 }
 

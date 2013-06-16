@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"log"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -20,13 +21,14 @@ var (
 
 	prodAtts  = []string{"Vintage", "Luxury", "Budget", "Dick-Tracey", "Swiss", "Traditional", "Stylish", "Modern"}
 	prodKinds = []string{"Dumbphone", "Console", "Toaster", "Kettle", "Tablet", "Watch"}
+
+	numProds, numCusts int
 )
 
 func addProds(tx *sql.Tx) (err error) {
 	var (
-		pa    string
-		rec   jsondb.M
-		total int64
+		pa  string
+		rec jsondb.M
 	)
 	log.Println("Adding product records...")
 	for _, pa1 := range prodAtts {
@@ -36,39 +38,58 @@ func addProds(tx *sql.Tx) (err error) {
 					pa = pa + " " + pa2
 				}
 				rec = jsondb.M{"Name": pa + " " + pk, "Kind": pk, "Atts": strings.Split(pa, " ")}
-				total++
+				numProds++
 				if _, err = tx.Exec(jsondb.S.InsertInto("Products", rec)); err != nil {
 					return
 				}
 			}
 		}
 	}
-	log.Printf("Added %v product records", total)
+	log.Printf("Added %v product records", numProds)
 	return
 }
 
 func addCusts(tx *sql.Tx) (err error) {
-	var (
-		total int64
-		rec   jsondb.M
-	)
+	var rec jsondb.M
 	log.Println("Adding customer records...")
 	for _, fn := range custFirsts {
 		for _, ln := range custLasts {
 			for _, c := range custCities {
 				rec = jsondb.M{"Name": fn + " " + ln, "FirstName": fn, "LastName": ln, "City": c}
-				total++
+				numCusts++
 				if _, err = tx.Exec(jsondb.S.InsertInto("Customers", rec)); err != nil {
 					return
 				}
 			}
 		}
 	}
-	log.Printf("Added %v customer records", total)
+	log.Printf("Added %v customer records", numCusts)
 	return
 }
 
 func addOrders(tx *sql.Tx) (err error) {
+	log.Println("Adding order records...")
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	var (
+		rec                   jsondb.M
+		numOrders, t, c, o, p int
+		prods                 []int
+	)
+	for c = 0; c < numCusts; c++ {
+		numOrders = r.Intn(32) + 1
+		for o = 0; o < numOrders; o++ {
+			prods = make([]int, 0, r.Intn(16)+1)
+			for p = 0; p < cap(prods); p++ {
+				prods = append(prods, r.Intn(numProds))
+			}
+			rec = jsondb.M{"Customer": c, "Products": prods}
+			if _, err = tx.Exec(jsondb.S.InsertInto("Orders", rec)); err != nil {
+				return
+			}
+			t++
+		}
+	}
+	log.Printf("Added %v order records", t)
 	return
 }
 
@@ -90,6 +111,7 @@ func main() {
 					if _, err = tx.Exec(jsondb.S.CreateTable("Customers")); err == nil {
 						if err = addCusts(tx); err == nil {
 							if _, err = tx.Exec(jsondb.S.CreateTable("Orders")); err == nil {
+								err = addOrders(tx)
 							}
 						}
 					}
@@ -97,8 +119,8 @@ func main() {
 			}
 			if err == nil {
 				err = tx.Commit()
-			} else {
-				tx.Rollback()
+			} else if err2 := tx.Rollback(); err2 != nil {
+				log.Printf("Rollback error: %v", err2)
 			}
 		}
 	}
