@@ -21,7 +21,7 @@ func newConn(drv *drv, dir string) (me *conn, err error) {
 	return
 }
 
-func (me *conn) CreateTable(name string) (err error) {
+func (me *conn) doCreateTable(name string) (err error) {
 	if _, ok := me.tables.all[name]; !ok {
 		if fp := filepath.Join(me.dir, name+FileExt); uio.FileExists(fp) {
 			err = errf("Cannot create table '%s': already exists", name)
@@ -35,7 +35,7 @@ func (me *conn) CreateTable(name string) (err error) {
 	return
 }
 
-func (me *conn) DropTable(name string) (err error) {
+func (me *conn) doDropTable(name string) (err error) {
 	t := me.tables.all[name]
 	delete(me.tables.all, name)
 	if t != nil {
@@ -46,7 +46,7 @@ func (me *conn) DropTable(name string) (err error) {
 	return
 }
 
-func (me *conn) InsertInto(name string, rec interface{}) (result driver.Result, err error) {
+func (me *conn) doInsertInto(name string, rec interface{}) (result driver.Result, err error) {
 	var t *table
 	m, _ := rec.(map[string]interface{})
 	if t, err = me.tables.get(name); err == nil {

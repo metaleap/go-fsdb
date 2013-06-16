@@ -47,13 +47,13 @@ func (me *stmt) NumInput() (num int) {
 func (me *stmt) Exec(args []driver.Value) (res driver.Result, err error) {
 	switch me.cmd {
 	case cmdCreateTable:
-		err = me.conn.CreateTable(me.table)
+		err = me.conn.doCreateTable(me.table)
 	case cmdDropTable:
-		err = me.conn.DropTable(me.table)
+		err = me.conn.doDropTable(me.table)
 	case cmdInsertInto:
-		res, err = me.conn.InsertInto(me.table, me.query["set"])
+		res, err = me.conn.doInsertInto(me.table, me.query["set"])
 	default:
-		err = errf("Nothing to Exec()")
+		err = errf("Cannot Exec() via '%s', try Query()", me.cmd)
 	}
 	if err == nil && res == nil {
 		res = &result{}
@@ -62,5 +62,11 @@ func (me *stmt) Exec(args []driver.Value) (res driver.Result, err error) {
 }
 
 func (me *stmt) Query(args []driver.Value) (res driver.Rows, err error) {
+	switch me.cmd {
+	case cmdSelectFrom:
+		err = errf("TODO")
+	default:
+		err = errf("Cannot Query() via '%s', try Exec()", me.cmd)
+	}
 	return
 }
