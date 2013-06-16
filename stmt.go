@@ -52,6 +52,10 @@ func (me *stmt) Exec(args []driver.Value) (res driver.Result, err error) {
 		err = me.conn.doDropTable(me.table)
 	case cmdInsertInto:
 		res, err = me.conn.doInsertInto(me.table, me.query["set"])
+	case cmdDeleteFrom:
+		err = errf("TODO: deleteFrom")
+	case cmdUpdateWhere:
+		err = errf("TODO: updateWhere")
 	default:
 		err = errf("Cannot Exec() via '%s', try Query()", me.cmd)
 	}
@@ -64,7 +68,7 @@ func (me *stmt) Exec(args []driver.Value) (res driver.Result, err error) {
 func (me *stmt) Query(args []driver.Value) (res driver.Rows, err error) {
 	switch me.cmd {
 	case cmdSelectFrom:
-		err = errf("TODO")
+		err = errf("TODO: selectFrom")
 	default:
 		err = errf("Cannot Query() via '%s', try Exec()", me.cmd)
 	}
