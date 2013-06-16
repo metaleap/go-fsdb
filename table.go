@@ -17,7 +17,7 @@ type tables struct {
 }
 
 func (me *tables) init(conn *conn) (err error) {
-	me.conn = conn
+	me.conn, me.all = conn, map[string]*table{}
 	if errs := uio.WalkFilesIn(conn.dir, func(filePath string) bool {
 		if strings.HasSuffix(strings.ToLower(filePath), FileExt) {
 			fn := filepath.Base(filePath)
@@ -32,8 +32,8 @@ func (me *tables) init(conn *conn) (err error) {
 
 func (me *tables) get(name string) (t *table, err error) {
 	if t = me.all[name]; t == nil {
-		t = &table{name: name, filePath: filepath.Join(me.conn.dir, name+FileExt)}
-		if err = t.lazyReload(); err == nil {
+		t = &table{conn: me.conn, name: name, filePath: filepath.Join(me.conn.dir, name+FileExt)}
+		if err = t.reload(true); err == nil {
 			me.all[t.name] = t
 		} else {
 			t = nil
@@ -43,14 +43,15 @@ func (me *tables) get(name string) (t *table, err error) {
 }
 
 type table struct {
+	conn           *conn
 	lastLoad       time.Time
 	name, filePath string
 	recs           M
 }
 
-func (me *table) lazyReload() (err error) {
+func (me *table) reload(lazy bool) (err error) {
 	var fi os.FileInfo
-	if fi, err = os.Stat(me.filePath); err == nil && fi.ModTime().UnixNano() > me.lastLoad.UnixNano() {
+	if fi, err = os.Stat(me.filePath); err == nil && ((!lazy) || me.recs == nil || me.lastLoad.UnixNano() == 0 || (me.conn.tx == nil && fi.ModTime().UnixNano() > me.lastLoad.UnixNano())) {
 		var raw []byte
 		if raw, err = ioutil.ReadFile(me.filePath); err == nil {
 			recs := M{}
@@ -63,28 +64,35 @@ func (me *table) lazyReload() (err error) {
 }
 
 func (me *table) insert(rec M) (res *result, err error) {
-	id := time.Now().UnixNano()
-	sid := strf("%v", id)
 	if rec == nil {
-		rec = M{}
-	}
-	if err = me.lazyReload(); err == nil {
-		me.recs[sid] = rec
-		if err = me.persist(); err == nil {
-			res = &result{AffectedRows: 1, InsertedLast: id}
+		err = errf("Cannot insert nil")
+	} else if err = me.reload(true); err == nil {
+		id := int64(len(me.recs))
+		sid := strf("%v", id)
+		if _, ok := me.recs[sid]; ok {
+			err = errf("Cannot insert: duplicate record ID")
 		} else {
-			delete(me.recs, sid)
+			me.recs[sid] = rec
+			if err = me.persist(); err == nil {
+				res = &result{AffectedRows: 1, InsertedLast: id}
+			} else {
+				delete(me.recs, sid)
+			}
 		}
 	}
 	return
 }
 
 func (me *table) persist() (err error) {
-	var raw []byte
-	if raw, err = json.Marshal(me.recs); err == nil {
-		if err = uio.WriteBinaryFile(me.filePath, raw); err == nil {
-			me.lastLoad = time.Now()
+	if me.conn.tx == nil {
+		var raw []byte
+		if raw, err = json.MarshalIndent(me.recs, "", "\t"); err == nil {
+			if err = uio.WriteBinaryFile(me.filePath, raw); err == nil {
+				me.lastLoad = time.Now()
+			}
 		}
+	} else {
+		me.conn.tx.tables[me] = true
 	}
 	return
 }

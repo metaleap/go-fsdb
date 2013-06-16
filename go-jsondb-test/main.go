@@ -18,32 +18,57 @@ var (
 	custLasts  = []string{"Dylan", "Cooper", "Schumann", "Trux", "Pike", "Gerrand", "Cheney", "Isom", "Smalley"}
 	custCities = []string{"Berlin", "London", "Sydney", "Phnom Penh", "Kuala Lumpur", "Jakarta", "Taipei", "Hong Kong", "San Francisco", "San Diego", "Los Santos", "San Fierro", "Liberty City", "Vice City", "Las Venturas"}
 
-	prodAtts  = []string{"Vintage", "Luxury", "Budget", "Dick Tracey", "Swiss", "Traditional", "Stylish", "Modern"}
+	prodAtts  = []string{"Vintage", "Luxury", "Budget", "Dick-Tracey", "Swiss", "Traditional", "Stylish", "Modern"}
 	prodKinds = []string{"Dumbphone", "Console", "Toaster", "Kettle", "Tablet", "Watch"}
 )
 
-func addProds(db *sql.DB) (err error) {
-	var pa string
+func addProds(tx *sql.Tx) (err error) {
+	var (
+		pa    string
+		rec   jsondb.M
+		total int64
+	)
+	log.Println("Adding product records...")
 	for _, pa1 := range prodAtts {
 		for _, pk := range prodKinds {
 			for _, pa2 := range prodAtts {
 				if pa = pa1; pa1 != pa2 {
 					pa = pa + " " + pa2
 				}
-				rec := jsondb.M{"Name": pa + " " + pk, "Kind": pk, "Atts": strings.Split(pa, " ")}
-				if _, err = db.Exec(jsondb.S.InsertInto("Products", rec)); err != nil {
+				rec = jsondb.M{"Name": pa + " " + pk, "Kind": pk, "Atts": strings.Split(pa, " ")}
+				total++
+				if _, err = tx.Exec(jsondb.S.InsertInto("Products", rec)); err != nil {
 					return
 				}
-				break
 			}
-			break
 		}
-		break
 	}
+	log.Printf("Added %v product records", total)
 	return
 }
 
-func addCusts(db *sql.DB) (err error) {
+func addCusts(tx *sql.Tx) (err error) {
+	var (
+		total int64
+		rec   jsondb.M
+	)
+	log.Println("Adding customer records...")
+	for _, fn := range custFirsts {
+		for _, ln := range custLasts {
+			for _, c := range custCities {
+				rec = jsondb.M{"Name": fn + " " + ln, "FirstName": fn, "LastName": ln, "City": c}
+				total++
+				if _, err = tx.Exec(jsondb.S.InsertInto("Customers", rec)); err != nil {
+					return
+				}
+			}
+		}
+	}
+	log.Printf("Added %v customer records", total)
+	return
+}
+
+func addOrders(tx *sql.Tx) (err error) {
 	return
 }
 
@@ -58,15 +83,23 @@ func main() {
 	if err == nil { // panic once at the end instead of everywhere
 		log.Printf("JSON-DB location: %s", *dbDirPath)
 		defer db.Close()
-		if _, err = db.Exec(jsondb.S.CreateTable("Products")); err == nil {
-			// if err = addProds(db); err == nil {
-			// if _, err = db.Exec(jsondb.S.CreateTable("Customers")); err == nil {
-			// 	if err = addCusts(db); err == nil {
-			// 		if _, err = db.Exec(jsondb.S.CreateTable("Orders")); err == nil {
-			// 		}
-			// 	}
-			// }
-			// }
+		var tx *sql.Tx
+		if tx, err = db.Begin(); err == nil {
+			if _, err = tx.Exec(jsondb.S.CreateTable("Products")); err == nil {
+				if err = addProds(tx); err == nil {
+					if _, err = tx.Exec(jsondb.S.CreateTable("Customers")); err == nil {
+						if err = addCusts(tx); err == nil {
+							if _, err = tx.Exec(jsondb.S.CreateTable("Orders")); err == nil {
+							}
+						}
+					}
+				}
+			}
+			if err == nil {
+				err = tx.Commit()
+			} else {
+				tx.Rollback()
+			}
 		}
 	}
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 
 type conn struct {
 	drv      *drv
+	tx       *tx
 	initTime time.Time
 	dir      string
 	tables   tables
@@ -49,7 +50,7 @@ func (me *conn) DropTable(name string) (err error) {
 
 func (me *conn) InsertInto(name string, rec interface{}) (result driver.Result, err error) {
 	var t *table
-	m, _ := rec.(M)
+	m, _ := rec.(map[string]interface{})
 	if t, err = me.tables.get(name); err == nil {
 		result, err = t.insert(m)
 	}
@@ -58,6 +59,8 @@ func (me *conn) InsertInto(name string, rec interface{}) (result driver.Result, 
 
 // Begin starts and returns a new transaction.
 func (me *conn) Begin() (tx driver.Tx, err error) {
+	me.tx = newTx(me)
+	tx = me.tx
 	return
 }
 
