@@ -9,6 +9,7 @@ import (
 	"time"
 
 	uio "github.com/metaleap/go-util/io"
+	usl "github.com/metaleap/go-util/slice"
 )
 
 type tables struct {
@@ -39,6 +40,30 @@ func (me *tables) get(name string) (t *table, err error) {
 			me.all[t.name] = t
 		} else {
 			t = nil
+		}
+	}
+	return
+}
+
+func (me *tables) persistAll(tableNames ...string) (err error) {
+	var e error
+	for name, table := range me.all {
+		if len(tableNames) == 0 || usl.StrHas(tableNames, name) {
+			if e = table.persist(); e != nil && err == nil {
+				err = e
+			}
+		}
+	}
+	return
+}
+
+func (me *tables) reloadAll(tableNames ...string) (err error) {
+	var e error
+	for name, table := range me.all {
+		if len(tableNames) == 0 || usl.StrHas(tableNames, name) {
+			if e = table.reload(false); e != nil && err == nil {
+				err = e
+			}
 		}
 	}
 	return

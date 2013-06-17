@@ -38,10 +38,10 @@ func addProds(tx *sql.Tx) (err error) {
 					pa = pa + " " + pa2
 				}
 				rec = jsondb.M{"Name": pa + " " + pk, "Kind": pk, "Atts": strings.Split(pa, " ")}
-				numProds++
 				if _, err = tx.Exec(jsondb.S.InsertInto("Products", rec)); err != nil {
 					return
 				}
+				numProds++
 			}
 		}
 	}
@@ -56,10 +56,10 @@ func addCusts(tx *sql.Tx) (err error) {
 		for _, ln := range custLasts {
 			for _, c := range custCities {
 				rec = jsondb.M{"Name": fn + " " + ln, "FirstName": fn, "LastName": ln, "City": c}
-				numCusts++
 				if _, err = tx.Exec(jsondb.S.InsertInto("Customers", rec)); err != nil {
 					return
 				}
+				numCusts++
 			}
 		}
 	}

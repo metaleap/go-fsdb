@@ -11,25 +11,15 @@ func newTx(conn *conn) (me *tx) {
 }
 
 func (me *tx) Commit() (err error) {
-	var e error
 	me.conn.tx = nil
-	for t, _ := range me.tables {
-		if e = t.persist(); e != nil && err == nil {
-			err = e
-		}
-	}
+	err = me.conn.tables.persistAll()
 	me.conn, me.tables = nil, nil
 	return
 }
 
 func (me *tx) Rollback() (err error) {
-	var e error
 	me.conn.tx = nil
-	for t, _ := range me.tables {
-		if e = t.reload(false); e != nil && err == nil {
-			err = e
-		}
-	}
+	err = me.conn.tables.reloadAll()
 	me.conn, me.tables = nil, nil
 	return
 }
