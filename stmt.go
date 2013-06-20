@@ -68,7 +68,7 @@ func (me *stmt) Exec(args []driver.Value) (res driver.Result, err error) {
 func (me *stmt) Query(args []driver.Value) (res driver.Rows, err error) {
 	switch me.cmd {
 	case cmdSelectFrom:
-		err = errf("TODO: selectFrom")
+		res, err = me.conn.doSelectFrom(me.table, me.query["where"])
 	default:
 		err = errf("Cannot Query() via '%s', try Exec()", me.cmd)
 	}

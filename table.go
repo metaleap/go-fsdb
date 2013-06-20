@@ -76,6 +76,31 @@ type table struct {
 	recs           M
 }
 
+func (me *table) fetch(where M) (recs []M, err error) {
+	var rec M
+	// fast map[id] pre-fetches if where has id query:
+	if idQuery := interfaces(where[idField]); len(idQuery) > 0 {
+		var ok bool
+		var str string
+		for _, id := range idQuery {
+			if str, ok = id.(string); ok {
+				if rec, _ = me.recs[str].(map[string]interface{}); rec != nil && rec.Match("", where, StrCmp) {
+					recs = append(recs, rec)
+				}
+			}
+		}
+	} else {
+		for rid, rix := range me.recs {
+			if rec, _ = rix.(map[string]interface{}); rec != nil {
+				if rec.Match(rid, where, StrCmp) {
+					recs = append(recs, rec)
+				}
+			}
+		}
+	}
+	return
+}
+
 func (me *table) reload(lazy bool) (err error) {
 	var fi os.FileInfo
 	if fi, err = os.Stat(me.filePath); err == nil && ((!lazy) || me.recs == nil || me.lastLoad.UnixNano() == 0 || (me.conn.tx == nil && fi.ModTime().UnixNano() > me.lastLoad.UnixNano())) {

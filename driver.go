@@ -2,14 +2,41 @@ package jsondb
 
 import (
 	"database/sql/driver"
+
+	ugo "github.com/metaleap/go-util"
 )
 
-const DriverName = "github.com/metaleap/go-jsondb"
+const (
+	DriverName = "github.com/metaleap/go-jsondb"
+
+	idField = "__id"
+)
 
 type M map[string]interface{}
 
+func (me M) Match(recId string, filters M, strCmp bool) (isMatch bool) {
+	matchAny := func(fn string, rvx interface{}, fvx []interface{}) bool {
+		for _, fv := range fvx {
+			if rvx == fv || strCmp && strf("%v", rvx) == strf("%v", fv) {
+				return true
+			}
+		}
+		return false
+	}
+	for fn, fx := range filters {
+		if fn != idField || len(recId) > 0 {
+			if !matchAny(fn, ugo.Ifx(fn == idField, recId, me[fn]), interfaces(fx)) {
+				return
+			}
+		}
+	}
+	isMatch = true
+	return
+}
+
 var (
 	FileExt = ".jsondbt"
+	StrCmp  bool
 
 	connCache map[string]driver.Conn
 )
@@ -37,6 +64,14 @@ func (me *drv) Open(dirPath string) (conn driver.Conn, err error) {
 
 func ConnectionCaching() bool {
 	return connCache != nil
+}
+
+func interfaces(ix interface{}) (slice []interface{}) {
+	var ok bool
+	if slice, ok = ix.([]interface{}); !ok {
+		slice = []interface{}{ix}
+	}
+	return
 }
 
 func PersistAll(connection driver.Conn, tableNames ...string) (err error) {
