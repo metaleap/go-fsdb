@@ -16,7 +16,7 @@ type rows struct {
 
 func newRows(recs map[string]M) (me *rows) {
 	me = &rows{recs: make([]M, 0, len(recs)), rids: make([]string, 0, len(recs))}
-	me.cols = append(me.cols, idField)
+	me.cols = append(me.cols, IdField)
 	for rid, rec := range recs {
 		for cn, _ := range rec {
 			usl.StrAppendUnique(&me.cols, cn)
@@ -42,7 +42,7 @@ func (me *rows) Next(dest []driver.Value) (err error) {
 			var str string
 			var ok bool
 			for ci, cn := range me.cols {
-				if cn == idField {
+				if cn == IdField {
 					dest[ci] = me.rids[me.cur]
 				} else if str, ok = rec[cn].(string); ok {
 					dest[ci] = []byte(str)

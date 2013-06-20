@@ -3,9 +3,9 @@ package main
 import (
 	"database/sql"
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,7 +32,7 @@ func addProds(tx *sql.Tx) (err error) {
 		pa  string
 		rec jsondb.M
 	)
-	log.Println("Adding product records...")
+	log.Println("Adding records to 'Products'...")
 	for _, pa1 := range prodAtts {
 		for _, pk := range prodKinds {
 			for _, pa2 := range prodAtts {
@@ -47,13 +47,13 @@ func addProds(tx *sql.Tx) (err error) {
 			}
 		}
 	}
-	log.Printf("Added %v product records", numProds)
+	log.Printf("Added %v 'Products' records", numProds)
 	return
 }
 
 func addCusts(tx *sql.Tx) (err error) {
 	var rec jsondb.M
-	log.Println("Adding customer records...")
+	log.Println("Adding records to 'Customers'...")
 	for _, fn := range custFirsts {
 		for _, ln := range custLasts {
 			for _, c := range custCities {
@@ -65,33 +65,33 @@ func addCusts(tx *sql.Tx) (err error) {
 			}
 		}
 	}
-	log.Printf("Added %v customer records", numCusts)
+	log.Printf("Added %v 'Customers' records", numCusts)
 	return
 }
 
 func addOrders(tx *sql.Tx) (err error) {
-	log.Println("Adding order records...")
+	log.Println("Adding records to 'Orders'...")
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var (
 		rec                   jsondb.M
 		numOrders, t, c, o, p int
-		prods                 []int
+		prods                 []string
 	)
 	for c = 0; c < numCusts; c++ {
 		numOrders = r.Intn(32) + 1
 		for o = 0; o < numOrders; o++ {
-			prods = make([]int, 0, r.Intn(16)+1)
+			prods = make([]string, 0, r.Intn(16)+1)
 			for p = 0; p < cap(prods); p++ {
-				prods = append(prods, r.Intn(numProds))
+				prods = append(prods, strconv.Itoa(r.Intn(numProds)))
 			}
-			rec = jsondb.M{"Customer": c, "Products": prods}
+			rec = jsondb.M{"Customer": strconv.Itoa(c), "Products": prods}
 			if _, err = tx.Exec(jsondb.S.InsertInto("Orders", rec)); err != nil {
 				return
 			}
 			t++
 		}
 	}
-	log.Printf("Added %v order records", t)
+	log.Printf("Added %v 'Orders' records", t)
 	return
 }
 
@@ -126,22 +126,36 @@ func main() {
 			}
 		}
 		var rows *sql.Rows
-		if rows, err = db.Query(jsondb.S.SelectFrom("Customers", jsondb.M{"LastName": "Collins"})); err == nil {
+		queryName := "Collins"
+		var recIds []string
+		if rows, err = db.Query(jsondb.S.SelectFrom("Customers", jsondb.M{"LastName": queryName})); err == nil {
 			defer rows.Close()
 			var cursor udb.SqlCursor
 			if err = cursor.PrepareColumns(rows); err == nil {
 				var rec map[string]interface{}
 				for rows.Next() {
 					if rec, err = cursor.Scan(rows); err == nil {
-						fmt.Printf("Record found for LastName=Collins:\t%v\n", rec)
+						// log.Printf("Record found for LastName=%#v:\t%v\n", queryName, rec)
+						recIds = append(recIds, rec[jsondb.IdField].(string))
 					} else {
 						break
 					}
 				}
 			}
-
 			if err == nil {
 				err = rows.Err()
+			}
+			if err == nil {
+				log.Printf("Found %v 'Customers' with LastName=%#v---deleting all their 'Orders':", len(recIds), queryName)
+				var numRows int64
+				if numRows, err = udb.Exec(db, false, jsondb.S.DeleteFrom("Orders", jsondb.M{"Customer": recIds})); err == nil {
+					log.Printf("..deletion affected %v rows", numRows)
+					queryName = "Alice"
+					log.Printf("Updating all FirstName=%#v 'Customers' from Berlin to Seattle:", queryName)
+					if numRows, err = udb.Exec(db, false, jsondb.S.UpdateWhere("Customers", jsondb.M{"City": "Seattle"}, jsondb.M{"City": "Berlin", "FirstName": "Alice"})); err == nil {
+						log.Printf("..update affected %v records.", numRows)
+					}
+				}
 			}
 		}
 

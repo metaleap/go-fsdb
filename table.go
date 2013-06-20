@@ -80,7 +80,7 @@ func (me *table) fetch(where M) (recs map[string]M, err error) {
 	var rec M
 	recs = map[string]M{}
 	// fast map[id] pre-fetches if where has id query:
-	if idQuery := interfaces(where[idField]); len(idQuery) > 0 {
+	if idQuery := interfaces(where[IdField]); len(idQuery) > 0 {
 		var ok bool
 		var str string
 		for _, id := range idQuery {
@@ -112,6 +112,28 @@ func (me *table) reload(lazy bool) (err error) {
 				me.recs, me.lastLoad = recs, time.Now()
 			}
 		}
+	}
+	return
+}
+
+func (me *table) delete(recIDs []string) (res *result, err error) {
+	var (
+		num int64
+		ok  bool
+	)
+	if err = me.reload(true); err == nil && len(recIDs) > 0 {
+		for _, rid := range recIDs {
+			if _, ok = me.recs[rid]; ok {
+				delete(me.recs, rid)
+				num++
+			}
+		}
+		if num > 0 {
+			err = me.persist()
+		}
+	}
+	if err == nil {
+		res = &result{AffectedRows: num}
 	}
 	return
 }

@@ -53,9 +53,9 @@ func (me *stmt) Exec(args []driver.Value) (res driver.Result, err error) {
 	case cmdInsertInto:
 		res, err = me.conn.doInsertInto(me.table, me.query["set"])
 	case cmdDeleteFrom:
-		err = errf("TODO: deleteFrom")
+		res, err = me.conn.doDeleteFrom(me.table, me.query["where"])
 	case cmdUpdateWhere:
-		err = errf("TODO: updateWhere")
+		res, err = me.conn.doUpdateWhere(me.table, me.query["set"], me.query["where"])
 	default:
 		err = errf("Cannot Exec() via '%s', try Query()", me.cmd)
 	}

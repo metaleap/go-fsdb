@@ -1,1 +1,2 @@
+//	Package description
 package jsondb

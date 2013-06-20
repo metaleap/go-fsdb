@@ -35,6 +35,21 @@ func (me *conn) doCreateTable(name string) (err error) {
 	return
 }
 
+func (me *conn) doDeleteFrom(name string, where interface{}) (res driver.Result, err error) {
+	var t *table
+	if t, err = me.tables.get(name); err == nil {
+		var recs map[string]M
+		if recs, err = t.fetch(m(where)); err == nil {
+			rids := make([]string, 0, len(recs))
+			for rid, _ := range recs {
+				rids = append(rids, rid)
+			}
+			res, err = t.delete(rids)
+		}
+	}
+	return
+}
+
 func (me *conn) doDropTable(name string) (err error) {
 	t := me.tables.all[name]
 	delete(me.tables.all, name)
@@ -61,6 +76,34 @@ func (me *conn) doSelectFrom(name string, where interface{}) (res driver.Rows, e
 		if recs, err = t.fetch(m(where)); err == nil {
 			res = newRows(recs)
 		}
+	}
+	return
+}
+
+func (me *conn) doUpdateWhere(name string, set, where interface{}) (res driver.Result, err error) {
+	var (
+		t   *table
+		num int64
+	)
+	upd := m(set)
+	if t, err = me.tables.get(name); err == nil && len(upd) > 0 {
+		if err = t.reload(true); err == nil {
+			var recs map[string]M
+			if recs, err = t.fetch(m(where)); err == nil {
+				for _, rec := range recs {
+					for fn, fv := range upd {
+						rec[fn] = fv
+					}
+					num++
+				}
+				if num > 0 {
+					err = t.persist()
+				}
+			}
+		}
+	}
+	if err == nil {
+		res = &result{AffectedRows: num}
 	}
 	return
 }

@@ -9,7 +9,7 @@ import (
 const (
 	DriverName = "github.com/metaleap/go-jsondb"
 
-	idField = "__id"
+	IdField = "__id"
 )
 
 type M map[string]interface{}
@@ -24,8 +24,8 @@ func (me M) Match(recId string, filters M, strCmp bool) (isMatch bool) {
 		return false
 	}
 	for fn, fx := range filters {
-		if fn != idField || len(recId) > 0 {
-			if !matchAny(fn, ugo.Ifx(fn == idField, recId, me[fn]), interfaces(fx)) {
+		if fn != IdField || len(recId) > 0 {
+			if !matchAny(fn, ugo.Ifx(fn == IdField, recId, me[fn]), interfaces(fx)) {
 				return
 			}
 		}
