@@ -72,7 +72,9 @@ type StmtGen struct {
 
 
 ```go
-var S StmtGen
+var (
+	S StmtGen
+)
 ```
 
 #### func (*StmtGen) CreateTable

@@ -14,7 +14,9 @@ const (
 	cmdDeleteFrom  = "deleteFrom"
 )
 
-var S StmtGen
+var (
+	S StmtGen
+)
 
 func errf(format string, args ...interface{}) error {
 	return fmt.Errorf(format, args...)
