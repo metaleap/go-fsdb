@@ -48,19 +48,17 @@ func (me *conn) doDropTable(name string) (err error) {
 
 func (me *conn) doInsertInto(name string, rec interface{}) (res driver.Result, err error) {
 	var t *table
-	m, _ := rec.(map[string]interface{})
 	if t, err = me.tables.get(name); err == nil {
-		res, err = t.insert(m)
+		res, err = t.insert(m(rec))
 	}
 	return
 }
 
 func (me *conn) doSelectFrom(name string, where interface{}) (res driver.Rows, err error) {
 	var t *table
-	m, _ := where.(map[string]interface{})
 	if t, err = me.tables.get(name); err == nil {
-		var recs []M
-		if recs, err = t.fetch(m); err == nil && len(recs) > 0 {
+		var recs map[string]M
+		if recs, err = t.fetch(m(where)); err == nil {
 			res = newRows(recs)
 		}
 	}

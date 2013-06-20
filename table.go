@@ -76,24 +76,25 @@ type table struct {
 	recs           M
 }
 
-func (me *table) fetch(where M) (recs []M, err error) {
+func (me *table) fetch(where M) (recs map[string]M, err error) {
 	var rec M
+	recs = map[string]M{}
 	// fast map[id] pre-fetches if where has id query:
 	if idQuery := interfaces(where[idField]); len(idQuery) > 0 {
 		var ok bool
 		var str string
 		for _, id := range idQuery {
 			if str, ok = id.(string); ok {
-				if rec, _ = me.recs[str].(map[string]interface{}); rec != nil && rec.Match("", where, StrCmp) {
-					recs = append(recs, rec)
+				if rec = m(me.recs[str]); rec != nil && rec.Match("", where, StrCmp) {
+					recs[str] = rec
 				}
 			}
 		}
 	} else {
 		for rid, rix := range me.recs {
-			if rec, _ = rix.(map[string]interface{}); rec != nil {
+			if rec = m(rix); rec != nil {
 				if rec.Match(rid, where, StrCmp) {
-					recs = append(recs, rec)
+					recs[rid] = rec
 				}
 			}
 		}

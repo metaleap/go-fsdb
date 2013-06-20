@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"strings"
@@ -11,12 +12,13 @@ import (
 	"github.com/metaleap/go-jsondb"
 
 	ugo "github.com/metaleap/go-util"
+	udb "github.com/metaleap/go-util/db"
 	uio "github.com/metaleap/go-util/io"
 )
 
 var (
-	custFirsts = []string{"Bob", "Alice", "Phil", "Ben", "Matt", "Rob", "Andrew", "Dave", "Kyle", "Mark"}
-	custLasts  = []string{"Dylan", "Cooper", "Schumann", "Trux", "Pike", "Gerrand", "Cheney", "Isom", "Smalley"}
+	custFirsts = []string{"Bob", "Alice", "Phil", "Edwyn", "Matt", "Rob", "Andrew", "Dave", "Kyle", "Mark"}
+	custLasts  = []string{"Dylan", "Cooper", "Collins", "Trux", "Pike", "Gerrand", "Cheney", "Isom", "Smalley"}
 	custCities = []string{"Berlin", "London", "Sydney", "Phnom Penh", "Kuala Lumpur", "Jakarta", "Taipei", "Hong Kong", "San Francisco", "San Diego", "Los Santos", "San Fierro", "Liberty City", "Vice City", "Las Venturas"}
 
 	prodAtts  = []string{"Vintage", "Luxury", "Budget", "Dick-Tracey", "Swiss", "Traditional", "Stylish", "Modern"}
@@ -55,7 +57,7 @@ func addCusts(tx *sql.Tx) (err error) {
 	for _, fn := range custFirsts {
 		for _, ln := range custLasts {
 			for _, c := range custCities {
-				rec = jsondb.M{"Name": fn + " " + ln, "FirstName": fn, "LastName": ln, "City": c}
+				rec = jsondb.M{"FullName": fn + " " + ln, "FirstName": fn, "LastName": ln, "City": c}
 				if _, err = tx.Exec(jsondb.S.InsertInto("Customers", rec)); err != nil {
 					return
 				}
@@ -123,6 +125,26 @@ func main() {
 				log.Printf("Rollback error: %v", err2)
 			}
 		}
+		var rows *sql.Rows
+		if rows, err = db.Query(jsondb.S.SelectFrom("Customers", jsondb.M{"LastName": "Collins"})); err == nil {
+			defer rows.Close()
+			var cursor udb.SqlCursor
+			if err = cursor.PrepareColumns(rows); err == nil {
+				var rec map[string]interface{}
+				for rows.Next() {
+					if rec, err = cursor.Scan(rows); err == nil {
+						fmt.Printf("Record found for LastName=Collins:\t%v\n", rec)
+					} else {
+						break
+					}
+				}
+			}
+
+			if err == nil {
+				err = rows.Err()
+			}
+		}
+
 	}
 
 	if err != nil {

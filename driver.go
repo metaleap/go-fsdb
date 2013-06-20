@@ -68,8 +68,17 @@ func ConnectionCaching() bool {
 
 func interfaces(ix interface{}) (slice []interface{}) {
 	var ok bool
-	if slice, ok = ix.([]interface{}); !ok {
-		slice = []interface{}{ix}
+	if slice, ok = ix.([]interface{}); (!ok) && ix != nil {
+		slice = append(slice, ix)
+	}
+	return
+}
+
+func m(ix interface{}) (m M) {
+	if m, _ = ix.(M); m == nil {
+		if mm := ix.(map[string]interface{}); mm != nil {
+			m = M(mm)
+		}
 	}
 	return
 }
