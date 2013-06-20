@@ -2,7 +2,6 @@
 --
     import "github.com/metaleap/go-jsondb"
 
-	Package description
 
 ## Usage
 
