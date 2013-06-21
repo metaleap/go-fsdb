@@ -4,72 +4,14 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strings"
+	"sync"
 	"time"
 
 	uio "github.com/metaleap/go-util/io"
-	usl "github.com/metaleap/go-util/slice"
 )
 
-type tables struct {
-	conn *conn
-	all  map[string]*table
-}
-
-func (me *tables) init(conn *conn, close bool) (err error) {
-	me.conn, me.all = conn, map[string]*table{}
-	if !close {
-		if errs := uio.WalkFilesIn(conn.dir, func(filePath string) bool {
-			if strings.HasSuffix(strings.ToLower(filePath), FileExt) {
-				fn := filepath.Base(filePath)
-				_, err = me.get(fn[:len(fn)-len(FileExt)])
-			}
-			return err == nil
-		}); len(errs) > 0 && err == nil {
-			err = errs[0]
-		}
-	}
-	return
-}
-
-func (me *tables) get(name string) (t *table, err error) {
-	if t = me.all[name]; t == nil {
-		t = &table{conn: me.conn, name: name, filePath: filepath.Join(me.conn.dir, name+FileExt)}
-		if err = t.reload(true); err == nil {
-			me.all[t.name] = t
-		} else {
-			t = nil
-		}
-	}
-	return
-}
-
-func (me *tables) persistAll(tableNames ...string) (err error) {
-	var e error
-	for name, table := range me.all {
-		if len(tableNames) == 0 || usl.StrHas(tableNames, name) {
-			if e = table.persist(); e != nil && err == nil {
-				err = e
-			}
-		}
-	}
-	return
-}
-
-func (me *tables) reloadAll(tableNames ...string) (err error) {
-	var e error
-	for name, table := range me.all {
-		if len(tableNames) == 0 || usl.StrHas(tableNames, name) {
-			if e = table.reload(false); e != nil && err == nil {
-				err = e
-			}
-		}
-	}
-	return
-}
-
 type table struct {
+	sync.Mutex
 	conn           *conn
 	lastLoad       time.Time
 	name, filePath string
@@ -109,6 +51,10 @@ func (me *table) reload(lazy bool) (err error) {
 		if raw, err = ioutil.ReadFile(me.filePath); err == nil {
 			recs := M{}
 			if err = json.Unmarshal(raw, &recs); err == nil {
+				if ConnectionCaching() {
+					me.Lock()
+					defer me.Unlock()
+				}
 				me.recs, me.lastLoad = recs, time.Now()
 			}
 		}
@@ -122,6 +68,10 @@ func (me *table) delete(recIDs []string) (res *result, err error) {
 		ok  bool
 	)
 	if err = me.reload(true); err == nil && len(recIDs) > 0 {
+		if ConnectionCaching() {
+			me.Lock()
+			defer me.Unlock()
+		}
 		for _, rid := range recIDs {
 			if _, ok = me.recs[rid]; ok {
 				delete(me.recs, rid)
@@ -147,6 +97,10 @@ func (me *table) insert(rec M) (res *result, err error) {
 		if _, ok := me.recs[sid]; ok {
 			err = errf("Cannot insert: duplicate record ID")
 		} else {
+			if ConnectionCaching() {
+				me.Lock()
+				defer me.Unlock()
+			}
 			me.recs[sid] = rec
 			if err = me.persist(); err == nil {
 				res = &result{AffectedRows: 1, InsertedLast: id}

@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"os"
 	"path/filepath"
+	"strings"
 
 	uio "github.com/metaleap/go-util/io"
 )
@@ -18,6 +19,29 @@ type conn struct {
 func newConn(drv *drv, dir string) (me *conn, err error) {
 	me = &conn{drv: drv, dir: dir}
 	err = me.tables.init(me, false)
+	return
+}
+
+func (me *conn) Begin() (tx driver.Tx, err error) {
+	me.tx = newTx(me)
+	tx = me.tx
+	return
+}
+
+func (me *conn) Close() (err error) {
+	me.tx = nil
+	me.tables.init(me, true)
+	return
+}
+
+func (me *conn) enumTableFiles() (tableNames []string, errs []error) {
+	errs = uio.WalkFilesIn(me.dir, func(filePath string) bool {
+		if strings.HasSuffix(filePath, FileExt) {
+			fn := filepath.Base(filePath)
+			tableNames = append(tableNames, fn[:len(fn)-len(FileExt)])
+		}
+		return true
+	})
 	return
 }
 
@@ -105,19 +129,6 @@ func (me *conn) doUpdateWhere(name string, set, where interface{}) (res driver.R
 	if err == nil {
 		res = &result{AffectedRows: num}
 	}
-	return
-}
-
-// Begin starts and returns a new transaction.
-func (me *conn) Begin() (tx driver.Tx, err error) {
-	me.tx = newTx(me)
-	tx = me.tx
-	return
-}
-
-func (me *conn) Close() (err error) {
-	me.tx = nil
-	me.tables.init(me, true)
 	return
 }
 
