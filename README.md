@@ -131,7 +131,7 @@ updateWhere).
 ```go
 func (me M) Match(recId string, filters M, strCmp bool) (isMatch bool)
 ```
-If me is a record, returns whether it matches the specified criteria.
+If `me` is a record, returns whether it matches the specified criteria.
 
 - recID: the `__id` of `me`, if any (since this isn't stored in the record
 itself)
@@ -139,7 +139,7 @@ itself)
 - filters: one or more criteria, `AND`-ed together. Each criteria is a slice of
 possible values, `OR`-ed together
 
-- strCmp: if false, just compares `interface{}==interface{}`. If true, also
+- strCmp: if `false`, just compares `interface{}==interface{}`. If `true`, also
 compares `fmt.Sprintf("%v", interface{}) == fmt.Sprintf("%v", interface{})`
 
 #### type StmtGen
