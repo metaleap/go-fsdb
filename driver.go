@@ -34,11 +34,11 @@ type M map[string]interface{}
 
 //	If me is a record, returns whether it matches the specified criteria.
 //
-//	- recID: the __id of me, if any (since this isn't stored in the record itself)
+//	- recID: the `__id` of `me`, if any (since this isn't stored in the record itself)
 //
-//	- filters: one or more criteria, AND-ed together. Each criteria is a slice of possible values, OR-ed together
+//	- filters: one or more criteria, `AND`-ed together. Each criteria is a slice of possible values, `OR`-ed together
 //
-//	- strCmp: if false, just compares `interface{}==interface{}`. If true, also compares `strf("%v", interface{}) == strf("%v", interface{})`
+//	- strCmp: if false, just compares `interface{}==interface{}`. If true, also compares `fmt.Sprintf("%v", interface{}) == fmt.Sprintf("%v", interface{})`
 func (me M) Match(recId string, filters M, strCmp bool) (isMatch bool) {
 	matchAny := func(fn string, rvx interface{}, fvx []interface{}) bool {
 		for _, fv := range fvx {
