@@ -4,7 +4,7 @@
 // Does not implement the finer details of *real* databases (such as
 // relational integrity, cascading deletes, ACID etc.) --- the *only* use-case
 // is **"faster prototyping of a DB app without needing to mess with a real-world
-// DB right now"** and easily inspectable, human-readable data table files.
+// DB right now"**, based on easily inspectable, human-readable data table files.
 //
 // **Connection string**: any (file-system) directory path.
 //
