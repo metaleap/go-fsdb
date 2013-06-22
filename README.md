@@ -166,42 +166,42 @@ var (
 ```go
 func (_ *StmtGen) CreateTable(name string) string
 ```
-Generates a `{"createTable":name}` statement
+Generates a `{"createTable":name}` statement.
 
 #### func (*StmtGen) DeleteFrom
 
 ```go
 func (me *StmtGen) DeleteFrom(name string, where M) string
 ```
-Generates a `{"deleteFrom":name, "where": where}` statement
+Generates a `{"deleteFrom":name, "where": where}` statement.
 
 #### func (*StmtGen) DropTable
 
 ```go
 func (_ *StmtGen) DropTable(name string) string
 ```
-Generates a `{"dropTable":name}` statement
+Generates a `{"dropTable":name}` statement.
 
 #### func (*StmtGen) InsertInto
 
 ```go
 func (me *StmtGen) InsertInto(name string, rec M) string
 ```
-Generates a `{"insertInto":name, "set": rec}` statement
+Generates a `{"insertInto":name, "set": rec}` statement.
 
 #### func (*StmtGen) SelectFrom
 
 ```go
 func (me *StmtGen) SelectFrom(name string, where M) string
 ```
-Generates a `{"selectFrom":name, "where": where}` statement
+Generates a `{"selectFrom":name, "where": where}` statement.
 
 #### func (*StmtGen) UpdateWhere
 
 ```go
 func (me *StmtGen) UpdateWhere(name string, set, where M) string
 ```
-Generates a `{"updateWhere":name, "set": set, "where": where}` statement
+Generates a `{"updateWhere":name, "set": set, "where": where}` statement.
 
 --
 **godocdown** http://github.com/robertkrimen/godocdown
