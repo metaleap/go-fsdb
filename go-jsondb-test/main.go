@@ -24,8 +24,8 @@ import (
 	"github.com/metaleap/go-jsondb"
 
 	"github.com/go-utils/udb"
+	"github.com/go-utils/ufs"
 	"github.com/go-utils/ugo"
-	"github.com/go-utils/uio"
 )
 
 var (
@@ -111,7 +111,7 @@ func main() {
 	defaultDir := ugo.GopathSrcGithub("metaleap", "go-jsondb", "go-jsondb-test", "testdbs", time.Now().Format("2006-01-02_15-04-05"))
 	dbDirPath := flag.String("dbdir", defaultDir, "Specify the path to a DB directory. I will open or create a JSON-DB in there.")
 	flag.Parse()
-	uio.EnsureDirExists(*dbDirPath)
+	ufs.EnsureDirExists(*dbDirPath)
 
 	sql.Register(jsondb.DriverName, jsondb.NewDriver())
 	db, err := sql.Open(jsondb.DriverName, *dbDirPath)

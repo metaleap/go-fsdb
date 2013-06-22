@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-utils/uio"
+	"github.com/go-utils/ufs"
 )
 
 type table struct {
@@ -116,7 +116,7 @@ func (me *table) persist() (err error) {
 	if me.conn.tx == nil {
 		var raw []byte
 		if raw, err = json.MarshalIndent(me.recs, "", " "); err == nil {
-			if err = uio.WriteBinaryFile(me.filePath, raw); err == nil {
+			if err = ufs.WriteBinaryFile(me.filePath, raw); err == nil {
 				me.lastLoad = time.Now()
 			}
 		}
