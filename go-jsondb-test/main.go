@@ -5,11 +5,11 @@
 // $GOPATH/src/github.com/metaleap/go-jsondb/go-jsondb-test
 //
 // In this newly created (or overwritten) database:
-// - it then creates 3 'tables'/collections: Customers, Products, Orders
-// - `insertInto` -- proceeds to populate those with semi-random records
-// - `selectFrom` -- queries the DB to find all Customers with LastName=Collins
-// - `deleteFrom` -- deletes all Orders belonging to those customers
-// - `updateWhere` -- for all `FirstName=Alice & City=Berlin` Customers, sets their City to Seattle
+// - via `createTable`, creates 3 'tables'/collections: Customers, Products, Orders
+// - via `insertInto`, populates those with semi-random records
+// - via `selectFrom`, queries the DB to find all Customers with *LastName=Collins*
+// - via `deleteFrom`, deletes all Orders belonging to those customers
+// - via `updateWhere`, for all *FirstName=Alice&City=Berlin* Customers, sets their City to Seattle
 package main
 
 import (

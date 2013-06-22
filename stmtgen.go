@@ -37,32 +37,32 @@ func (_ *StmtGen) genStmt(cmd, name string, set, where M) string {
 	return string(raw)
 }
 
-//	Generates a `{"createTable":name}` statement
+//	Generates a `{"createTable":name}` statement.
 func (_ *StmtGen) CreateTable(name string) string {
 	return S.genStmt(cmdCreateTable, name, nil, nil)
 }
 
-//	Generates a `{"dropTable":name}` statement
+//	Generates a `{"dropTable":name}` statement.
 func (_ *StmtGen) DropTable(name string) string {
 	return S.genStmt(cmdDropTable, name, nil, nil)
 }
 
-//	Generates a `{"insertInto":name, "set": rec}` statement
+//	Generates a `{"insertInto":name, "set": rec}` statement.
 func (me *StmtGen) InsertInto(name string, rec M) string {
 	return S.genStmt(cmdInsertInto, name, rec, nil)
 }
 
-//	Generates a `{"selectFrom":name, "where": where}` statement
+//	Generates a `{"selectFrom":name, "where": where}` statement.
 func (me *StmtGen) SelectFrom(name string, where M) string {
 	return S.genStmt(cmdSelectFrom, name, nil, where)
 }
 
-//	Generates a `{"deleteFrom":name, "where": where}` statement
+//	Generates a `{"deleteFrom":name, "where": where}` statement.
 func (me *StmtGen) DeleteFrom(name string, where M) string {
 	return S.genStmt(cmdDeleteFrom, name, nil, where)
 }
 
-//	Generates a `{"updateWhere":name, "set": set, "where": where}` statement
+//	Generates a `{"updateWhere":name, "set": set, "where": where}` statement.
 func (me *StmtGen) UpdateWhere(name string, set, where M) string {
 	return S.genStmt(cmdUpdateWhere, name, set, where)
 }
