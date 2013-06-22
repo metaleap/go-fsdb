@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	uio "github.com/metaleap/go-util/io"
+	"github.com/go-utils/uio"
 )
 
 type table struct {

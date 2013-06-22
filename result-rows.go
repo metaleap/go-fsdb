@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 	"io"
 
-	usl "github.com/metaleap/go-util/slice"
+	"github.com/go-utils/uslice"
 )
 
 type result struct {
@@ -33,7 +33,7 @@ func newRows(recs map[string]M) (me *rows) {
 	me.cols = append(me.cols, IdField)
 	for rid, rec := range recs {
 		for cn, _ := range rec {
-			usl.StrAppendUnique(&me.cols, cn)
+			uslice.StrAppendUnique(&me.cols, cn)
 		}
 		me.recs = append(me.recs, rec)
 		me.rids = append(me.rids, rid)

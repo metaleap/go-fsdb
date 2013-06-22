@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	uio "github.com/metaleap/go-util/io"
+	"github.com/go-utils/uio"
 )
 
 type conn struct {

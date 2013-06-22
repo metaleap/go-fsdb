@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	usl "github.com/metaleap/go-util/slice"
+	"github.com/go-utils/uslice"
 )
 
 type tables struct {
@@ -49,7 +49,7 @@ func (me *tables) get(name string) (t *table, err error) {
 func (me *tables) persistAll(tableNames ...string) (err error) {
 	var e error
 	for name, table := range me.all {
-		if len(tableNames) == 0 || usl.StrHas(tableNames, name) {
+		if len(tableNames) == 0 || uslice.StrHas(tableNames, name) {
 			if e = table.persist(); e != nil && err == nil {
 				err = e
 			}
@@ -82,9 +82,9 @@ func (me *tables) reloadAll(tableNames ...string) (err error) {
 			defer me.Unlock()
 		}
 		for name, table := range me.all {
-			if !usl.StrHas(tnames, name) {
+			if !uslice.StrHas(tnames, name) {
 				delete(me.all, name)
-			} else if usl.StrHas(tableNames, name) {
+			} else if uslice.StrHas(tableNames, name) {
 				if e = table.reload(false); e != nil && err == nil {
 					err = e
 				}

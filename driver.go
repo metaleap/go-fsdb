@@ -3,7 +3,7 @@ package jsondb
 import (
 	"database/sql/driver"
 
-	ugo "github.com/metaleap/go-util"
+	"github.com/go-utils/ugo"
 )
 
 const (

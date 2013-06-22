@@ -23,9 +23,9 @@ import (
 
 	"github.com/metaleap/go-jsondb"
 
-	ugo "github.com/metaleap/go-util"
-	udb "github.com/metaleap/go-util/db"
-	uio "github.com/metaleap/go-util/io"
+	"github.com/go-utils/udb"
+	"github.com/go-utils/ugo"
+	"github.com/go-utils/uio"
 )
 
 var (
