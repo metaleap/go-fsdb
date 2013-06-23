@@ -1,10 +1,6 @@
-// A "database driver" (compatible with Go's `database/sql` package)
-// that's using a local directory of JSON files as a database of "tables",
-// implemented on top of `github.com/metaleap/go-fsdb`.
 package jsondb
 
 import (
-	"database/sql/driver"
 	"encoding/json"
 
 	"github.com/metaleap/go-fsdb"
@@ -20,7 +16,7 @@ var (
 )
 
 //	Returns a `fsdb.NewDriver` initialized with `FileExt` and JSON un/marshalers.
-func NewDriver(connectionCaching bool) driver.Driver {
+func NewDriver(connectionCaching bool) *fsdb.Driver {
 	var jsonMarshal fsdb.Marshal
 	jsonMarshal = func(v interface{}) ([]byte, error) {
 		return json.MarshalIndent(v, "", " ")

@@ -26,7 +26,7 @@ func (me *table) fetch(where M) (recs map[string]M, err error) {
 		var str string
 		for _, id := range idQuery {
 			if str, ok = id.(string); ok {
-				if rec = m(me.recs[str]); rec != nil && rec.Match("", where, StrCmp) {
+				if rec = m(me.recs[str]); rec != nil && rec.Match("", where, me.conn.drv.StrCmp) {
 					recs[str] = rec
 				}
 			}
@@ -34,7 +34,7 @@ func (me *table) fetch(where M) (recs map[string]M, err error) {
 	} else {
 		for rid, rix := range me.recs {
 			if rec = m(rix); rec != nil {
-				if rec.Match(rid, where, StrCmp) {
+				if rec.Match(rid, where, me.conn.drv.StrCmp) {
 					recs[rid] = rec
 				}
 			}

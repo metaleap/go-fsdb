@@ -9,8 +9,8 @@
 // **Connection string**: any (file-system) directory path.
 //
 // **SQL syntax**: none. Instead, the driver uses simple JSON strings such
-// as `{"createTable": "FooBars"}`. Use the documented `StmtGen` methods
-// (ie. `fsdb.S.CreateTable` and friends) to easily generate statements
+// as `{"createTable": "FooBars"}`. Use the documented `StmtFooBar` methods
+// (ie. `fsdb.StmtCreateTable` and friends) to easily generate statements
 // for use with sql.Exec() and sql.Query(), whether via a `sql.DB` or a `sql.Tx`.
 //
 // I didn't see the use in parsing real SQL syntax --- each real-world DB has its

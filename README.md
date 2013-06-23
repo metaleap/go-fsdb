@@ -13,8 +13,8 @@ now"**, based on easily inspectable, human-readable data table files.
 **Connection string**: any (file-system) directory path.
 
 **SQL syntax**: none. Instead, the driver uses simple JSON strings such as
-`{"createTable": "FooBars"}`. Use the documented `StmtGen` methods (ie.
-`fsdb.S.CreateTable` and friends) to easily generate statements for use with
+`{"createTable": "FooBars"}`. Use the documented `StmtFooBar` methods (ie.
+`fsdb.StmtCreateTable` and friends) to easily generate statements for use with
 sql.Exec() and sql.Query(), whether via a `sql.DB` or a `sql.Tx`.
 
 I didn't see the use in parsing real SQL syntax --- each real-world DB has its
@@ -47,17 +47,54 @@ const (
 )
 ```
 
+#### func  StmtCreateTable
+
 ```go
-var (
-	//	Defaults to false. See `M.Match` method for explanation.
-	StrCmp bool
-)
+func StmtCreateTable(name string) string
 ```
+Generates a `{"createTable":name}` statement.
+
+#### func  StmtDeleteFrom
+
+```go
+func StmtDeleteFrom(name string, where M) string
+```
+Generates a `{"deleteFrom":name, "where": where}` statement.
+
+#### func  StmtDropTable
+
+```go
+func StmtDropTable(name string) string
+```
+Generates a `{"dropTable":name}` statement.
+
+#### func  StmtInsertInto
+
+```go
+func StmtInsertInto(name string, rec M) string
+```
+Generates a `{"insertInto":name, "set": rec}` statement.
+
+#### func  StmtSelectFrom
+
+```go
+func StmtSelectFrom(name string, where M) string
+```
+Generates a `{"selectFrom":name, "where": where}` statement.
+
+#### func  StmtUpdateWhere
+
+```go
+func StmtUpdateWhere(name string, set, where M) string
+```
+Generates a `{"updateWhere":name, "set": set, "where": where}` statement.
 
 #### type Driver
 
 ```go
 type Driver struct {
+	//	Defaults to false. See `M.Match` method for explanation.
+	StrCmp bool
 }
 ```
 
@@ -160,64 +197,6 @@ type Marshal func(v interface{}) ([]byte, error)
 ```
 
 Function that marshals an in-memory data table to a local file.
-
-#### type StmtGen
-
-```go
-type StmtGen struct {
-}
-```
-
-Stateless struct, use via the exported `S` global singleton.
-
-```go
-var (
-	//	Generates statements for sql.Exec() and sql.Query().
-	S StmtGen
-)
-```
-
-#### func (*StmtGen) CreateTable
-
-```go
-func (_ *StmtGen) CreateTable(name string) string
-```
-Generates a `{"createTable":name}` statement.
-
-#### func (*StmtGen) DeleteFrom
-
-```go
-func (me *StmtGen) DeleteFrom(name string, where M) string
-```
-Generates a `{"deleteFrom":name, "where": where}` statement.
-
-#### func (*StmtGen) DropTable
-
-```go
-func (_ *StmtGen) DropTable(name string) string
-```
-Generates a `{"dropTable":name}` statement.
-
-#### func (*StmtGen) InsertInto
-
-```go
-func (me *StmtGen) InsertInto(name string, rec M) string
-```
-Generates a `{"insertInto":name, "set": rec}` statement.
-
-#### func (*StmtGen) SelectFrom
-
-```go
-func (me *StmtGen) SelectFrom(name string, where M) string
-```
-Generates a `{"selectFrom":name, "where": where}` statement.
-
-#### func (*StmtGen) UpdateWhere
-
-```go
-func (me *StmtGen) UpdateWhere(name string, set, where M) string
-```
-Generates a `{"updateWhere":name, "set": set, "where": where}` statement.
 
 #### type Unmarshal
 

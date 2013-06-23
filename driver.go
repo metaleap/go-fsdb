@@ -12,11 +12,6 @@ const (
 	IdField = "__id"
 )
 
-var (
-	//	Defaults to false. See `M.Match` method for explanation.
-	StrCmp bool
-)
-
 //	Function that marshals an in-memory data table to a local file.
 type Marshal func(v interface{}) ([]byte, error)
 
@@ -25,6 +20,9 @@ type Unmarshal func(data []byte, v interface{}) error
 
 //	Implements the `database/sql/driver.Driver` interface.
 type Driver struct {
+	//	Defaults to false. See `M.Match` method for explanation.
+	StrCmp bool
+
 	marshal   Marshal
 	unmarshal Unmarshal
 	fileExt   string
@@ -39,7 +37,8 @@ type Driver struct {
 //
 //	`marshal` and `unmarshal` implement the actual encoding from and to binary or textual data table files.
 func NewDriver(fileExt string, connectionCaching bool, marshal Marshal, unmarshal Unmarshal) (me *Driver) {
-	if me = (&Driver{fileExt: fileExt, marshal: marshal, unmarshal: unmarshal}); connectionCaching {
+	me = &Driver{fileExt: fileExt, marshal: marshal, unmarshal: unmarshal}
+	if connectionCaching {
 		me.connCache = map[string]*conn{}
 	}
 	return

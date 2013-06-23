@@ -53,7 +53,7 @@ func addProds(tx *sql.Tx) (err error) {
 					pa = pa + " " + pa2
 				}
 				rec = fsdb.M{"Name": pa + " " + pk, "Kind": pk, "Atts": strings.Split(pa, " ")}
-				if _, err = tx.Exec(fsdb.S.InsertInto("Products", rec)); err != nil {
+				if _, err = tx.Exec(fsdb.StmtInsertInto("Products", rec)); err != nil {
 					return
 				}
 				numProds++
@@ -71,7 +71,7 @@ func addCusts(tx *sql.Tx) (err error) {
 		for _, ln := range custLasts {
 			for _, c := range custCities {
 				rec = fsdb.M{"FullName": fn + " " + ln, "FirstName": fn, "LastName": ln, "City": c}
-				if _, err = tx.Exec(fsdb.S.InsertInto("Customers", rec)); err != nil {
+				if _, err = tx.Exec(fsdb.StmtInsertInto("Customers", rec)); err != nil {
 					return
 				}
 				numCusts++
@@ -98,7 +98,7 @@ func addOrders(tx *sql.Tx) (err error) {
 				prods = append(prods, strconv.Itoa(r.Intn(numProds)))
 			}
 			rec = fsdb.M{"Customer": strconv.Itoa(c), "Products": prods}
-			if _, err = tx.Exec(fsdb.S.InsertInto("Orders", rec)); err != nil {
+			if _, err = tx.Exec(fsdb.StmtInsertInto("Orders", rec)); err != nil {
 				return
 			}
 			t++
@@ -114,18 +114,18 @@ func main() {
 	flag.Parse()
 	ufs.EnsureDirExists(*dbDirPath)
 
-	sql.Register(fsdb_json.DriverName, fsdb_json.NewDriver())
+	sql.Register(fsdb_json.DriverName, fsdb_json.NewDriver(false))
 	db, err := sql.Open(fsdb_json.DriverName, *dbDirPath)
 	if err == nil { // panic once at the end instead of everywhere
 		log.Printf("JSON-DB location: %s", *dbDirPath)
 		defer db.Close()
 		var tx *sql.Tx
 		if tx, err = db.Begin(); err == nil {
-			if _, err = tx.Exec(fsdb.S.CreateTable("Products")); err == nil {
+			if _, err = tx.Exec(fsdb.StmtCreateTable("Products")); err == nil {
 				if err = addProds(tx); err == nil {
-					if _, err = tx.Exec(fsdb.S.CreateTable("Customers")); err == nil {
+					if _, err = tx.Exec(fsdb.StmtCreateTable("Customers")); err == nil {
 						if err = addCusts(tx); err == nil {
-							if _, err = tx.Exec(fsdb.S.CreateTable("Orders")); err == nil {
+							if _, err = tx.Exec(fsdb.StmtCreateTable("Orders")); err == nil {
 								err = addOrders(tx)
 							}
 						}
@@ -141,7 +141,7 @@ func main() {
 		var rows *sql.Rows
 		queryName := "Collins"
 		var recIds []string
-		if rows, err = db.Query(fsdb.S.SelectFrom("Customers", fsdb.M{"LastName": queryName})); err == nil {
+		if rows, err = db.Query(fsdb.StmtSelectFrom("Customers", fsdb.M{"LastName": queryName})); err == nil {
 			defer rows.Close()
 			var cursor udb.SqlCursor
 			if err = cursor.PrepareColumns(rows); err == nil {
@@ -161,11 +161,11 @@ func main() {
 			if err == nil {
 				log.Printf("Found %v 'Customers' with LastName=%#v---deleting all their 'Orders':", len(recIds), queryName)
 				var numRows int64
-				if numRows, err = udb.Exec(db, false, fsdb.S.DeleteFrom("Orders", fsdb.M{"Customer": recIds})); err == nil {
+				if numRows, err = udb.Exec(db, false, fsdb.StmtDeleteFrom("Orders", fsdb.M{"Customer": recIds})); err == nil {
 					log.Printf("..deletion affected %v rows", numRows)
 					queryName = "Alice"
 					log.Printf("Updating all FirstName=%#v 'Customers' from Berlin to Seattle:", queryName)
-					if numRows, err = udb.Exec(db, false, fsdb.S.UpdateWhere("Customers", fsdb.M{"City": "Seattle"}, fsdb.M{"City": "Berlin", "FirstName": "Alice"})); err == nil {
+					if numRows, err = udb.Exec(db, false, fsdb.StmtUpdateWhere("Customers", fsdb.M{"City": "Seattle"}, fsdb.M{"City": "Berlin", "FirstName": "Alice"})); err == nil {
 						log.Printf("..update affected %v records.", numRows)
 					}
 				}
