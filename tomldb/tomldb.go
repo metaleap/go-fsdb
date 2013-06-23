@@ -4,6 +4,8 @@
 package tomldb
 
 import (
+	"database/sql/driver"
+
 	"github.com/go-forks/toml"
 	"github.com/go-utils/ustr"
 	"github.com/metaleap/go-fsdb"
@@ -19,7 +21,7 @@ var (
 )
 
 //	Returns a `fsdb.NewDriver` initialized with `FileExt` and TOML un/marshalers.
-func NewDriver(connectionCaching bool) *fsdb.Driver {
+func NewDriver(connectionCaching bool) driver.Driver {
 	tomlUnmarshal := func(data []byte, v interface{}) (err error) {
 		_, err = toml.Decode(string(data), v)
 		return

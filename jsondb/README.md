@@ -22,7 +22,7 @@ var (
 #### func  NewDriver
 
 ```go
-func NewDriver(connectionCaching bool) *fsdb.Driver
+func NewDriver(connectionCaching bool) driver.Driver
 ```
 Returns a `fsdb.NewDriver` initialized with `FileExt` and JSON un/marshalers.
 

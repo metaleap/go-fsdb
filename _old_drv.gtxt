@@ -1,0 +1,31 @@
+
+//	Not necessary for normal use: `me` persists tables that are being
+//	written to via `insertInto`/`updateWhere`/`deleteFrom` immediately, or in
+//	a transaction context, at the next `Tx.Commit`.
+//
+//	If no `tableNames` are specifed, persists ALL tables belonging to `dbConn`,
+//	otherwise only the specified tables are persisted.
+func (me *drv) PersistAll(dbConn driver.Conn, tableNames ...string) (err error) {
+	if c, _ := dbConn.(*conn); c != nil {
+		err = c.tables.persistAll(tableNames...)
+	} else {
+		err = errf("fsdb.PersistAll() needs a *fsdb.conn, not a %#v", dbConn)
+	}
+	return
+}
+
+//	Not necessary for normal use: `me` lazily auto-reloads tables that have been
+//	modified on disk if such a data-refresh is necessary for the current operation.
+//
+//	If no `tableNames` are specifed, reloads all tables belonging to `dbConn`.
+//
+//	In any event, the reload always includes new-on-disk table data files not
+//	previously loaded, and removes in-memory data tables no longer on disk.
+func (me *drv) ReloadAll(dbConn driver.Conn, tableNames ...string) (err error) {
+	if c, _ := dbConn.(*conn); c != nil {
+		err = c.tables.reloadAll(tableNames...)
+	} else {
+		err = errf("fsdb.ReloadAll() needs a *fsdb.conn, not a %#v", dbConn)
+	}
+	return
+}

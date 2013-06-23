@@ -17,7 +17,7 @@
 //
 // ## SQL syntax:
 //
-// none. Instead, the driver uses simple JSON strings such
+// none. Instead, the `Driver` uses simple JSON strings such
 // as `{"createTable": "FooBars"}`. Use the documented `StmtFooBar` methods
 // (ie. `fsdb.StmtCreateTable` and friends) to easily generate statements
 // for use with sql.Exec() and sql.Query(), whether via a `sql.DB` or a `sql.Tx`.
@@ -30,11 +30,10 @@
 //
 // works "so-so" with Go's built-in pooling: with
 // many redundant in-memory copies of the same data tables, as per below.
-// See documentation on the `Driver.ConnectionCaching` method for details.
+// See documentation on the `fsdb.NewDriver` method for details.
 //
 // Each `fsdb`-driven `sql.DB` connection maintains a full in-memory copy of its data
-// table files, auto-persisting and auto-reloading as necessary -- see documentation on
-// the `Driver.PersistAll` and `Driver.ReloadAll` methods for details.
+// table files, auto-persisting and auto-reloading as necessary.
 //
 // ## Transactions:
 //

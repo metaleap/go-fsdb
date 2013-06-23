@@ -4,6 +4,7 @@
 package jsondb
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 
 	"github.com/metaleap/go-fsdb"
@@ -19,7 +20,7 @@ var (
 )
 
 //	Returns a `fsdb.NewDriver` initialized with `FileExt` and JSON un/marshalers.
-func NewDriver(connectionCaching bool) *fsdb.Driver {
+func NewDriver(connectionCaching bool) driver.Driver {
 	jsonUnmarshal := json.Unmarshal
 	jsonMarshal := func(v interface{}) ([]byte, error) { return json.MarshalIndent(v, "", " ") }
 	return fsdb.NewDriver(FileExt, connectionCaching, jsonMarshal, jsonUnmarshal)
