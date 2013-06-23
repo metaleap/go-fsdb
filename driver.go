@@ -1,4 +1,4 @@
-package jsondb
+package fsdb
 
 import (
 	"database/sql/driver"
@@ -7,26 +7,21 @@ import (
 )
 
 const (
-	//	Always use this for:
-	//	- sql.Register(jsondb.DriverName, jsondb.NewDriver())
-	//	- sql.Open(jsondb.DriverName, yourDbDirPath)
-	DriverName = "github.com/metaleap/go-jsondb"
-
-	//	This is not used as a JSON hash/object property in final storage
+	//	This is not used as a object/hash property/entry in final storage
 	//	but may be used in selectFrom/deleteFrom/updateWhere queries:
 	IdField = "__id"
 )
 
 var (
-	//	File name extension for data files. If this is to be customized,
-	//	set this in your init() or at least before starting to use jsondb.
-	FileExt = ".jsondbt"
-
 	//	Defaults to false. See `M.Match()` method for explanation.
 	StrCmp bool
 
 	connCache map[string]driver.Conn
 )
+
+type Marshal func(v interface{}) ([]byte, error)
+
+type Unmarshal func(data []byte, v interface{}) error
 
 //	A convenience short-hand. Used for actual records, as well as `where` criteria (in
 //	selectFrom, deleteFrom, updateWhere) and `set` data (in insertInto and updateWhere).
@@ -60,11 +55,13 @@ func (me M) Match(recId string, filters M, strCmp bool) (isMatch bool) {
 }
 
 type drv struct {
+	marshal   Marshal
+	unmarshal Unmarshal
+	fileExt   string
 }
 
-//	Usage: `sql.Register(jsondb.DriverName, jsondb.NewDriver())`
-func NewDriver() (me driver.Driver) {
-	me = &drv{}
+func NewDriver(fileExt string, marshal Marshal, unmarshal Unmarshal) (me driver.Driver) {
+	me = &drv{marshal: marshal, unmarshal: unmarshal}
 	return
 }
 
@@ -89,7 +86,7 @@ func (me *drv) Open(dirPath string) (conn driver.Conn, err error) {
 //	operating on the same database via their own sql.DB connections:
 //
 //	that's because, while the standard `sql` package does provide "connection pooling",
-//	this is not sensible for jsondb, as each jsondb.conn does hold its own complete copy
+//	this is not sensible for `fsdb`, as each `fsdb.conn` does hold its own complete copy
 //	of data files in-memory.
 //
 //	Table writes are Mutex-locking as necessary if (and only if) connection caching is enabled.
@@ -114,7 +111,7 @@ func m(ix interface{}) (m M) {
 	return
 }
 
-//	Not necessary for normal use: jsondb persists tables that are being
+//	Not necessary for normal use: `fsdb` persists tables that are being
 //	written to via insertInto/updateWhere/deleteFrom immediately, or in
 //	a transaction context, at the next Tx.Commit().
 //
@@ -124,12 +121,12 @@ func PersistAll(dbConn driver.Conn, tableNames ...string) (err error) {
 	if c, _ := dbConn.(*conn); c != nil {
 		err = c.tables.persistAll(tableNames...)
 	} else {
-		err = errf("jsondb.PersistAll() needs a *jsondb.conn, not a %#v", dbConn)
+		err = errf("fsdb.PersistAll() needs a *fsdb.conn, not a %#v", dbConn)
 	}
 	return
 }
 
-//	Not necessary for normal use: jsondb lazily auto-reloads tables that have been
+//	Not necessary for normal use: `fsdb` lazily auto-reloads tables that have been
 //	modified on disk if such a data-refresh is necessary for the current operation.
 //
 //	If no tableNames are specifed, reloads all tables belonging to dbConn.
@@ -140,7 +137,7 @@ func ReloadAll(dbConn driver.Conn, tableNames ...string) (err error) {
 	if c, _ := dbConn.(*conn); c != nil {
 		err = c.tables.reloadAll(tableNames...)
 	} else {
-		err = errf("jsondb.ReloadAll() needs a *jsondb.conn, not a %#v", dbConn)
+		err = errf("fsdb.ReloadAll() needs a *fsdb.conn, not a %#v", dbConn)
 	}
 	return
 }

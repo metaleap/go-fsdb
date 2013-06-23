@@ -1,7 +1,6 @@
-package jsondb
+package fsdb
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -50,7 +49,7 @@ func (me *table) reload(lazy bool) (err error) {
 		var raw []byte
 		if raw, err = ioutil.ReadFile(me.filePath); err == nil {
 			recs := M{}
-			if err = json.Unmarshal(raw, &recs); err == nil {
+			if err = me.conn.drv.unmarshal(raw, &recs); err == nil {
 				if ConnectionCaching() {
 					me.Lock()
 					defer me.Unlock()
@@ -115,7 +114,7 @@ func (me *table) insert(rec M) (res *result, err error) {
 func (me *table) persist() (err error) {
 	if me.conn.tx == nil {
 		var raw []byte
-		if raw, err = json.MarshalIndent(me.recs, "", " "); err == nil {
+		if raw, err = me.conn.drv.marshal(me.recs); err == nil {
 			if err = ufs.WriteBinaryFile(me.filePath, raw); err == nil {
 				me.lastLoad = time.Now()
 			}

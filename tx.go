@@ -1,4 +1,4 @@
-package jsondb
+package fsdb
 
 type tx struct {
 	conn   *conn

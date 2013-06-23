@@ -1,49 +1,47 @@
-# jsondb
+# fsdb
 --
-    import "github.com/metaleap/go-jsondb"
+    import "github.com/metaleap/go-fsdb"
 
-A "database driver" (compatible with Go's `database/sql` package)
-that's using a directory of JSON text files as a database of "tables".
+A "database driver" (compatible with Go's `database/sql` package) that's using a
+local directory of files as a database of "tables".
 
-Does not implement the finer details of *real* databases (such as
-relational integrity, cascading deletes, ACID etc.) --- the *only* use-case
-is **"faster prototyping of a DB app without needing to mess with a real-world
-DB right now"**, based on easily inspectable, human-readable data table files.
+Does not implement the finer details of *real* databases (such as relational
+integrity, cascading deletes, ACID etc.) --- the *only* use-case is **"faster
+prototyping of a DB app without needing to mess with a real-world DB right
+now"**, based on easily inspectable, human-readable data table files.
 
 **Connection string**: any (file-system) directory path.
 
-**SQL syntax**: none. Instead, the driver uses simple JSON strings such
-as `{"createTable": "FooBars"}`. Use the documented `StmtGen` methods
-(ie. `jsondb.S.CreateTable()` and friends) to easily generate statements
-for use with sql.Exec() and sql.Query(), whether via a `sql.DB` or a `sql.Tx`.
+**SQL syntax**: none. Instead, the driver uses simple JSON strings such as
+`{"createTable": "FooBars"}`. Use the documented `StmtGen` methods (ie.
+`fsdb.S.CreateTable()` and friends) to easily generate statements for use with
+sql.Exec() and sql.Query(), whether via a `sql.DB` or a `sql.Tx`.
 
 I didn't see the use in parsing real SQL syntax --- each real-world DB has its
-own syntax quirks, so when moving on from jsondb to the real DB, I'd have to adapt
-most/all SQL statements anyway. This way, it's guaranteed that I'll have to do so.
+own syntax quirks, so when moving on from `fsdb` to the real DB, I'd have to
+adapt most/all SQL statements anyway. This way, it's guaranteed that I'll have
+to do so.
 
 **Connection pooling/caching**: works "so-so" with Go's built-in pooling: with
-many redundant in-memory copies of the same data tables, as per below.
-See documentation on the global exported `ConnectionCaching()` function for details.
+many redundant in-memory copies of the same data tables, as per below. See
+documentation on the global exported `ConnectionCaching()` function for details.
 
-Each jsondb-driven `sql.DB` connection maintains a full in-memory copy of its data
-table files, auto-persisting and auto-reloading as necessary -- see documentation on
-the global exported `PersistAll()` and `ReloadAll()` functions for details.
+Each `fsdb`-driven `sql.DB` connection maintains a full in-memory copy of its
+data table files, auto-persisting and auto-reloading as necessary -- see
+documentation on the global exported `PersistAll()` and `ReloadAll()` functions
+for details.
 
-**Transactions**: they're a useful hack at best -- the idea here is for batching multiple
-writes together. Each `insertInto`/`updateWhere`/`deleteFrom` would normally persist the
-full table to disk immediately. But in the context of a transaction, they won't -- only
-the final `Tx.Commit()` will flush participating tables to disk.
+**Transactions**: they're a useful hack at best -- the idea here is for batching
+multiple writes together. Each `insertInto`/`updateWhere`/`deleteFrom` would
+normally persist the full table to disk immediately. But in the context of a
+transaction, they won't -- only the final `Tx.Commit()` will flush participating
+tables to disk.
 
 ## Usage
 
 ```go
 const (
-	//	Always use this for:
-	//	- sql.Register(jsondb.DriverName, jsondb.NewDriver())
-	//	- sql.Open(jsondb.DriverName, yourDbDirPath)
-	DriverName = "github.com/metaleap/go-jsondb"
-
-	//	This is not used as a JSON hash/object property in final storage
+	//	This is not used as a object/hash property/entry in final storage
 	//	but may be used in selectFrom/deleteFrom/updateWhere queries:
 	IdField = "__id"
 )
@@ -51,10 +49,6 @@ const (
 
 ```go
 var (
-	//	File name extension for data files. If this is to be customized,
-	//	set this in your init() or at least before starting to use jsondb.
-	FileExt = ".jsondbt"
-
 	//	Defaults to false. See `M.Match()` method for explanation.
 	StrCmp bool
 )
@@ -73,7 +67,7 @@ You should do so if your use-case entails many parallel go-routines concurrently
 operating on the same database via their own sql.DB connections:
 
 that's because, while the standard `sql` package does provide "connection
-pooling", this is not sensible for jsondb, as each jsondb.conn does hold its own
+pooling", this is not sensible for `fsdb`, as each `fsdb.conn` does hold its own
 complete copy of data files in-memory.
 
 Table writes are Mutex-locking as necessary if (and only if) connection caching
@@ -82,16 +76,15 @@ is enabled.
 #### func  NewDriver
 
 ```go
-func NewDriver() (me driver.Driver)
+func NewDriver(fileExt string, marshal Marshal, unmarshal Unmarshal) (me driver.Driver)
 ```
-Usage: `sql.Register(jsondb.DriverName, jsondb.NewDriver())`
 
 #### func  PersistAll
 
 ```go
 func PersistAll(dbConn driver.Conn, tableNames ...string) (err error)
 ```
-Not necessary for normal use: jsondb persists tables that are being written to
+Not necessary for normal use: `fsdb` persists tables that are being written to
 via insertInto/updateWhere/deleteFrom immediately, or in a transaction context,
 at the next Tx.Commit().
 
@@ -103,7 +96,7 @@ only the specified tables are persisted.
 ```go
 func ReloadAll(dbConn driver.Conn, tableNames ...string) (err error)
 ```
-Not necessary for normal use: jsondb lazily auto-reloads tables that have been
+Not necessary for normal use: `fsdb` lazily auto-reloads tables that have been
 modified on disk if such a data-refresh is necessary for the current operation.
 
 If no tableNames are specifed, reloads all tables belonging to dbConn.
@@ -144,6 +137,13 @@ possible values, `OR`-ed together
 
 - strCmp: if `false`, just compares `interface{}==interface{}`. If `true`, also
 compares `fmt.Sprintf("%v", interface{}) == fmt.Sprintf("%v", interface{})`
+
+#### type Marshal
+
+```go
+type Marshal func(v interface{}) ([]byte, error)
+```
+
 
 #### type StmtGen
 
@@ -202,6 +202,12 @@ Generates a `{"selectFrom":name, "where": where}` statement.
 func (me *StmtGen) UpdateWhere(name string, set, where M) string
 ```
 Generates a `{"updateWhere":name, "set": set, "where": where}` statement.
+
+#### type Unmarshal
+
+```go
+type Unmarshal func(data []byte, v interface{}) error
+```
 
 --
 **godocdown** http://github.com/robertkrimen/godocdown

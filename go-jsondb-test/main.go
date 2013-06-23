@@ -1,8 +1,8 @@
-// This program demonstrates how to use the `go-jsondb` package:
+// This program demonstrates how to use the `go-fsdb` and `go-fsdb/jsondb` packages:
 //
 // It creates a new database inside the directory specified via the `-dbdir=""`
 // command-line flag, or if not present, in a new temporary directory under
-// $GOPATH/src/github.com/metaleap/go-jsondb/go-jsondb-test
+// $GOPATH/src/github.com/metaleap/go-fsdb/go-jsondb-test
 //
 // In this newly created (or overwritten) database:
 // - via `createTable`, creates 3 'tables'/collections: Customers, Products, Orders
@@ -21,7 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/metaleap/go-jsondb"
+	fsdb "github.com/metaleap/go-fsdb"
+	fsdb_json "github.com/metaleap/go-fsdb/jsondb"
 
 	"github.com/go-utils/udb"
 	"github.com/go-utils/ufs"
@@ -42,7 +43,7 @@ var (
 func addProds(tx *sql.Tx) (err error) {
 	var (
 		pa  string
-		rec jsondb.M
+		rec fsdb.M
 	)
 	log.Println("Adding records to 'Products'...")
 	for _, pa1 := range prodAtts {
@@ -51,8 +52,8 @@ func addProds(tx *sql.Tx) (err error) {
 				if pa = pa1; pa1 != pa2 {
 					pa = pa + " " + pa2
 				}
-				rec = jsondb.M{"Name": pa + " " + pk, "Kind": pk, "Atts": strings.Split(pa, " ")}
-				if _, err = tx.Exec(jsondb.S.InsertInto("Products", rec)); err != nil {
+				rec = fsdb.M{"Name": pa + " " + pk, "Kind": pk, "Atts": strings.Split(pa, " ")}
+				if _, err = tx.Exec(fsdb.S.InsertInto("Products", rec)); err != nil {
 					return
 				}
 				numProds++
@@ -64,13 +65,13 @@ func addProds(tx *sql.Tx) (err error) {
 }
 
 func addCusts(tx *sql.Tx) (err error) {
-	var rec jsondb.M
+	var rec fsdb.M
 	log.Println("Adding records to 'Customers'...")
 	for _, fn := range custFirsts {
 		for _, ln := range custLasts {
 			for _, c := range custCities {
-				rec = jsondb.M{"FullName": fn + " " + ln, "FirstName": fn, "LastName": ln, "City": c}
-				if _, err = tx.Exec(jsondb.S.InsertInto("Customers", rec)); err != nil {
+				rec = fsdb.M{"FullName": fn + " " + ln, "FirstName": fn, "LastName": ln, "City": c}
+				if _, err = tx.Exec(fsdb.S.InsertInto("Customers", rec)); err != nil {
 					return
 				}
 				numCusts++
@@ -85,7 +86,7 @@ func addOrders(tx *sql.Tx) (err error) {
 	log.Println("Adding records to 'Orders'...")
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var (
-		rec                   jsondb.M
+		rec                   fsdb.M
 		numOrders, t, c, o, p int
 		prods                 []string
 	)
@@ -96,8 +97,8 @@ func addOrders(tx *sql.Tx) (err error) {
 			for p = 0; p < cap(prods); p++ {
 				prods = append(prods, strconv.Itoa(r.Intn(numProds)))
 			}
-			rec = jsondb.M{"Customer": strconv.Itoa(c), "Products": prods}
-			if _, err = tx.Exec(jsondb.S.InsertInto("Orders", rec)); err != nil {
+			rec = fsdb.M{"Customer": strconv.Itoa(c), "Products": prods}
+			if _, err = tx.Exec(fsdb.S.InsertInto("Orders", rec)); err != nil {
 				return
 			}
 			t++
@@ -108,23 +109,23 @@ func addOrders(tx *sql.Tx) (err error) {
 }
 
 func main() {
-	defaultDir := ugo.GopathSrcGithub("metaleap", "go-jsondb", "go-jsondb-test", "testdbs", time.Now().Format("2006-01-02_15-04-05"))
+	defaultDir := ugo.GopathSrcGithub("metaleap", "go-fsdb", "go-jsondb-test", "testdbs", time.Now().Format("2006-01-02_15-04-05"))
 	dbDirPath := flag.String("dbdir", defaultDir, "Specify the path to a DB directory. I will open or create a JSON-DB in there.")
 	flag.Parse()
 	ufs.EnsureDirExists(*dbDirPath)
 
-	sql.Register(jsondb.DriverName, jsondb.NewDriver())
-	db, err := sql.Open(jsondb.DriverName, *dbDirPath)
+	sql.Register(fsdb_json.DriverName, fsdb_json.NewDriver())
+	db, err := sql.Open(fsdb_json.DriverName, *dbDirPath)
 	if err == nil { // panic once at the end instead of everywhere
 		log.Printf("JSON-DB location: %s", *dbDirPath)
 		defer db.Close()
 		var tx *sql.Tx
 		if tx, err = db.Begin(); err == nil {
-			if _, err = tx.Exec(jsondb.S.CreateTable("Products")); err == nil {
+			if _, err = tx.Exec(fsdb.S.CreateTable("Products")); err == nil {
 				if err = addProds(tx); err == nil {
-					if _, err = tx.Exec(jsondb.S.CreateTable("Customers")); err == nil {
+					if _, err = tx.Exec(fsdb.S.CreateTable("Customers")); err == nil {
 						if err = addCusts(tx); err == nil {
-							if _, err = tx.Exec(jsondb.S.CreateTable("Orders")); err == nil {
+							if _, err = tx.Exec(fsdb.S.CreateTable("Orders")); err == nil {
 								err = addOrders(tx)
 							}
 						}
@@ -140,7 +141,7 @@ func main() {
 		var rows *sql.Rows
 		queryName := "Collins"
 		var recIds []string
-		if rows, err = db.Query(jsondb.S.SelectFrom("Customers", jsondb.M{"LastName": queryName})); err == nil {
+		if rows, err = db.Query(fsdb.S.SelectFrom("Customers", fsdb.M{"LastName": queryName})); err == nil {
 			defer rows.Close()
 			var cursor udb.SqlCursor
 			if err = cursor.PrepareColumns(rows); err == nil {
@@ -148,7 +149,7 @@ func main() {
 				for rows.Next() {
 					if rec, err = cursor.Scan(rows); err == nil {
 						// log.Printf("Record found for LastName=%#v:\t%v\n", queryName, rec)
-						recIds = append(recIds, rec[jsondb.IdField].(string))
+						recIds = append(recIds, rec[fsdb.IdField].(string))
 					} else {
 						break
 					}
@@ -160,11 +161,11 @@ func main() {
 			if err == nil {
 				log.Printf("Found %v 'Customers' with LastName=%#v---deleting all their 'Orders':", len(recIds), queryName)
 				var numRows int64
-				if numRows, err = udb.Exec(db, false, jsondb.S.DeleteFrom("Orders", jsondb.M{"Customer": recIds})); err == nil {
+				if numRows, err = udb.Exec(db, false, fsdb.S.DeleteFrom("Orders", fsdb.M{"Customer": recIds})); err == nil {
 					log.Printf("..deletion affected %v rows", numRows)
 					queryName = "Alice"
 					log.Printf("Updating all FirstName=%#v 'Customers' from Berlin to Seattle:", queryName)
-					if numRows, err = udb.Exec(db, false, jsondb.S.UpdateWhere("Customers", jsondb.M{"City": "Seattle"}, jsondb.M{"City": "Berlin", "FirstName": "Alice"})); err == nil {
+					if numRows, err = udb.Exec(db, false, fsdb.S.UpdateWhere("Customers", fsdb.M{"City": "Seattle"}, fsdb.M{"City": "Berlin", "FirstName": "Alice"})); err == nil {
 						log.Printf("..update affected %v records.", numRows)
 					}
 				}

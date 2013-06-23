@@ -1,4 +1,4 @@
-package jsondb
+package fsdb
 
 import (
 	"database/sql/driver"
@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-utils/uio"
+	"github.com/go-utils/ufs"
 )
 
 type conn struct {
@@ -35,10 +35,10 @@ func (me *conn) Close() (err error) {
 }
 
 func (me *conn) enumTableFiles() (tableNames []string, errs []error) {
-	errs = uio.WalkFilesIn(me.dir, func(filePath string) bool {
-		if strings.HasSuffix(filePath, FileExt) {
+	errs = ufs.WalkFilesIn(me.dir, func(filePath string) bool {
+		if strings.HasSuffix(filePath, me.drv.fileExt) {
 			fn := filepath.Base(filePath)
-			tableNames = append(tableNames, fn[:len(fn)-len(FileExt)])
+			tableNames = append(tableNames, fn[:len(fn)-len(me.drv.fileExt)])
 		}
 		return true
 	})
@@ -47,10 +47,13 @@ func (me *conn) enumTableFiles() (tableNames []string, errs []error) {
 
 func (me *conn) doCreateTable(name string) (err error) {
 	if _, ok := me.tables.all[name]; !ok {
-		if fp := filepath.Join(me.dir, name+FileExt); uio.FileExists(fp) {
+		if fp := filepath.Join(me.dir, name+me.drv.fileExt); ufs.FileExists(fp) {
 			err = errf("Cannot create table '%s': already exists", name)
 		} else {
-			err = uio.WriteTextFile(fp, "{}")
+			var data []byte
+			if data, err = me.drv.marshal(M{}); err == nil {
+				err = ufs.WriteBinaryFile(fp, data)
+			}
 		}
 	}
 	if err == nil {
@@ -80,7 +83,7 @@ func (me *conn) doDropTable(name string) (err error) {
 	if t != nil {
 		err = os.Remove(t.filePath)
 	} else {
-		err = os.Remove(filepath.Join(me.dir, name+FileExt))
+		err = os.Remove(filepath.Join(me.dir, name+me.drv.fileExt))
 	}
 	return
 }

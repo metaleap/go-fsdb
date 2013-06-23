@@ -1,4 +1,4 @@
-package jsondb
+package fsdb
 
 import (
 	"path/filepath"
@@ -32,7 +32,7 @@ func (me *tables) init(conn *conn, close bool) (err error) {
 
 func (me *tables) get(name string) (t *table, err error) {
 	if t = me.all[name]; t == nil {
-		t = &table{conn: me.conn, name: name, filePath: filepath.Join(me.conn.dir, name+FileExt)}
+		t = &table{conn: me.conn, name: name, filePath: filepath.Join(me.conn.dir, name+me.conn.drv.fileExt)}
 		if err = t.reload(true); err == nil {
 			if ConnectionCaching() {
 				me.Lock()
