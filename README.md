@@ -14,7 +14,7 @@ now"**, based on easily inspectable, human-readable data table files.
 
 **SQL syntax**: none. Instead, the driver uses simple JSON strings such as
 `{"createTable": "FooBars"}`. Use the documented `StmtGen` methods (ie.
-`fsdb.S.CreateTable()` and friends) to easily generate statements for use with
+`fsdb.S.CreateTable` and friends) to easily generate statements for use with
 sql.Exec() and sql.Query(), whether via a `sql.DB` or a `sql.Tx`.
 
 I didn't see the use in parsing real SQL syntax --- each real-world DB has its
@@ -24,17 +24,17 @@ to do so.
 
 **Connection pooling/caching**: works "so-so" with Go's built-in pooling: with
 many redundant in-memory copies of the same data tables, as per below. See
-documentation on the global exported `ConnectionCaching()` function for details.
+documentation on the `Driver.ConnectionCaching` method for details.
 
 Each `fsdb`-driven `sql.DB` connection maintains a full in-memory copy of its
 data table files, auto-persisting and auto-reloading as necessary -- see
-documentation on the global exported `PersistAll()` and `ReloadAll()` functions
-for details.
+documentation on the `Driver.PersistAll` and `Driver.ReloadAll` methods for
+details.
 
 **Transactions**: they're a useful hack at best -- the idea here is for batching
 multiple writes together. Each `insertInto`/`updateWhere`/`deleteFrom` would
 normally persist the full table to disk immediately. But in the context of a
-transaction, they won't -- only the final `Tx.Commit()` will flush participating
+transaction, they won't -- only the final `Tx.Commit` will flush participating
 tables to disk.
 
 ## Usage
@@ -49,68 +49,83 @@ const (
 
 ```go
 var (
-	//	Defaults to false. See `M.Match()` method for explanation.
+	//	Defaults to false. See `M.Match` method for explanation.
 	StrCmp bool
 )
 ```
 
-#### func  ConnectionCaching
+#### type Driver
 
 ```go
-func ConnectionCaching() bool
+type Driver struct {
+}
 ```
-Returns whether connection caching is currently enabled, defaulting to false.
 
-Connection caching can be enabled via `SetConnectionCaching(bool)`.
+Implements the `database/sql/driver.Driver` interface.
+
+#### func  NewDriver
+
+```go
+func NewDriver(fileExt string, connectionCaching bool, marshal Marshal, unmarshal Unmarshal) (me *Driver)
+```
+Creates a new `*fsdb.Driver` and returns it.
+
+`fileExt` -- the file name extension used by `me` for reading and writing table
+data files.
+
+`connectionCaching` -- see the `Driver.ConnectionCaching` method for details.
+
+`marshal` and `unmarshal` implement the actual encoding from and to binary or
+textual data table files.
+
+#### func (*Driver) ConnectionCaching
+
+```go
+func (me *Driver) ConnectionCaching() bool
+```
+Returns whether connection caching was enabled for `me` via `fsdb.NewDriver`.
 
 You should do so if your use-case entails many parallel go-routines concurrently
-operating on the same database via their own sql.DB connections:
+operating on the same database via their own `sql.DB` connections:
 
 that's because, while the standard `sql` package does provide "connection
 pooling", this is not sensible for `fsdb`, as each `fsdb.conn` does hold its own
 complete copy of data files in-memory.
 
-Table writes are Mutex-locking as necessary if (and only if) connection caching
-is enabled.
+All table writes are `sync.Mutex`-locking as necessary ONLY if connection
+caching is enabled.
 
-#### func  NewDriver
-
-```go
-func NewDriver(fileExt string, marshal Marshal, unmarshal Unmarshal) (me driver.Driver)
-```
-
-#### func  PersistAll
+#### func (*Driver) Open
 
 ```go
-func PersistAll(dbConn driver.Conn, tableNames ...string) (err error)
+func (me *Driver) Open(dirPath string) (_ driver.Conn, err error)
 ```
-Not necessary for normal use: `fsdb` persists tables that are being written to
-via insertInto/updateWhere/deleteFrom immediately, or in a transaction context,
-at the next Tx.Commit().
+Implements the `database/sql/driver.Driver.Open` interface method.
 
-If no tableNames are specifed, persists all tables belonging to dbConn, else
-only the specified tables are persisted.
-
-#### func  ReloadAll
+#### func (*Driver) PersistAll
 
 ```go
-func ReloadAll(dbConn driver.Conn, tableNames ...string) (err error)
+func (me *Driver) PersistAll(dbConn driver.Conn, tableNames ...string) (err error)
 ```
-Not necessary for normal use: `fsdb` lazily auto-reloads tables that have been
+Not necessary for normal use: `me` persists tables that are being written to via
+`insertInto`/`updateWhere`/`deleteFrom` immediately, or in a transaction
+context, at the next `Tx.Commit`.
+
+If no `tableNames` are specifed, persists ALL tables belonging to `dbConn`,
+otherwise only the specified tables are persisted.
+
+#### func (*Driver) ReloadAll
+
+```go
+func (me *Driver) ReloadAll(dbConn driver.Conn, tableNames ...string) (err error)
+```
+Not necessary for normal use: `me` lazily auto-reloads tables that have been
 modified on disk if such a data-refresh is necessary for the current operation.
 
-If no tableNames are specifed, reloads all tables belonging to dbConn.
+If no `tableNames` are specifed, reloads all tables belonging to `dbConn`.
 
-The reload includes new-on-disk table data files not previously loaded, and
-removes in-memory data tables no longer on disk.
-
-#### func  SetConnectionCaching
-
-```go
-func SetConnectionCaching(enableCaching bool)
-```
-Enables or disables connection caching depending on the specified bool. For
-details on connection caching, see `ConnectionCaching()`.
+In any event, the reload always includes new-on-disk table data files not
+previously loaded, and removes in-memory data tables no longer on disk.
 
 #### type M
 
@@ -144,6 +159,7 @@ compares `fmt.Sprintf("%v", interface{}) == fmt.Sprintf("%v", interface{})`
 type Marshal func(v interface{}) ([]byte, error)
 ```
 
+Function that marshals an in-memory data table to a local file.
 
 #### type StmtGen
 
@@ -208,6 +224,8 @@ Generates a `{"updateWhere":name, "set": set, "where": where}` statement.
 ```go
 type Unmarshal func(data []byte, v interface{}) error
 ```
+
+Function that unmarshals an in-memory data table from a local file.
 
 --
 **godocdown** http://github.com/robertkrimen/godocdown

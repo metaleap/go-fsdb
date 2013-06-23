@@ -2,13 +2,13 @@ package fsdb
 
 import (
 	"path/filepath"
-	"sync"
 
+	"github.com/go-utils/ugo"
 	"github.com/go-utils/uslice"
 )
 
 type tables struct {
-	sync.Mutex
+	ugo.MutexIf
 	conn *conn
 	all  map[string]*table
 }
@@ -34,10 +34,7 @@ func (me *tables) get(name string) (t *table, err error) {
 	if t = me.all[name]; t == nil {
 		t = &table{conn: me.conn, name: name, filePath: filepath.Join(me.conn.dir, name+me.conn.drv.fileExt)}
 		if err = t.reload(true); err == nil {
-			if ConnectionCaching() {
-				me.Lock()
-				defer me.Unlock()
-			}
+			defer me.UnlockIf(me.LockIf(me.shouldLock()))
 			me.all[t.name] = t
 		} else {
 			t = nil
@@ -77,10 +74,7 @@ func (me *tables) reloadAll(tableNames ...string) (err error) {
 		if len(tableNames) == 0 {
 			tableNames = tnames
 		}
-		if ConnectionCaching() {
-			me.Lock()
-			defer me.Unlock()
-		}
+		defer me.UnlockIf(me.LockIf(me.shouldLock()))
 		for name, table := range me.all {
 			if !uslice.StrHas(tnames, name) {
 				delete(me.all, name)
@@ -92,4 +86,8 @@ func (me *tables) reloadAll(tableNames ...string) (err error) {
 		}
 	}
 	return
+}
+
+func (me *tables) shouldLock() bool {
+	return me.conn.drv.ConnectionCaching()
 }

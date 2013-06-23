@@ -3,14 +3,14 @@ package fsdb
 import (
 	"io/ioutil"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/go-utils/ufs"
+	"github.com/go-utils/ugo"
 )
 
 type table struct {
-	sync.Mutex
+	ugo.MutexIf
 	conn           *conn
 	lastLoad       time.Time
 	name, filePath string
@@ -50,10 +50,7 @@ func (me *table) reload(lazy bool) (err error) {
 		if raw, err = ioutil.ReadFile(me.filePath); err == nil {
 			recs := M{}
 			if err = me.conn.drv.unmarshal(raw, &recs); err == nil {
-				if ConnectionCaching() {
-					me.Lock()
-					defer me.Unlock()
-				}
+				defer me.UnlockIf(me.LockIf(me.shouldLock()))
 				me.recs, me.lastLoad = recs, time.Now()
 			}
 		}
@@ -67,10 +64,7 @@ func (me *table) delete(recIDs []string) (res *result, err error) {
 		ok  bool
 	)
 	if err = me.reload(true); err == nil && len(recIDs) > 0 {
-		if ConnectionCaching() {
-			me.Lock()
-			defer me.Unlock()
-		}
+		defer me.UnlockIf(me.LockIf(me.shouldLock()))
 		for _, rid := range recIDs {
 			if _, ok = me.recs[rid]; ok {
 				delete(me.recs, rid)
@@ -96,10 +90,7 @@ func (me *table) insert(rec M) (res *result, err error) {
 		if _, ok := me.recs[sid]; ok {
 			err = errf("Cannot insert: duplicate record ID")
 		} else {
-			if ConnectionCaching() {
-				me.Lock()
-				defer me.Unlock()
-			}
+			defer me.UnlockIf(me.LockIf(me.shouldLock()))
 			me.recs[sid] = rec
 			if err = me.persist(); err == nil {
 				res = &result{AffectedRows: 1, InsertedLast: id}
@@ -123,4 +114,8 @@ func (me *table) persist() (err error) {
 		me.conn.tx.tables[me] = true
 	}
 	return
+}
+
+func (me *table) shouldLock() bool {
+	return me.conn.drv.ConnectionCaching()
 }

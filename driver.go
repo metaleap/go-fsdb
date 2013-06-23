@@ -13,15 +13,97 @@ const (
 )
 
 var (
-	//	Defaults to false. See `M.Match()` method for explanation.
+	//	Defaults to false. See `M.Match` method for explanation.
 	StrCmp bool
-
-	connCache map[string]driver.Conn
 )
 
+//	Function that marshals an in-memory data table to a local file.
 type Marshal func(v interface{}) ([]byte, error)
 
+//	Function that unmarshals an in-memory data table from a local file.
 type Unmarshal func(data []byte, v interface{}) error
+
+//	Implements the `database/sql/driver.Driver` interface.
+type Driver struct {
+	marshal   Marshal
+	unmarshal Unmarshal
+	fileExt   string
+	connCache map[string]*conn
+}
+
+//	Creates a new `*fsdb.Driver` and returns it.
+//
+//	`fileExt` -- the file name extension used by `me` for reading and writing table data files.
+//
+//	`connectionCaching` -- see the `Driver.ConnectionCaching` method for details.
+//
+//	`marshal` and `unmarshal` implement the actual encoding from and to binary or textual data table files.
+func NewDriver(fileExt string, connectionCaching bool, marshal Marshal, unmarshal Unmarshal) (me *Driver) {
+	if me = (&Driver{fileExt: fileExt, marshal: marshal, unmarshal: unmarshal}); connectionCaching {
+		me.connCache = map[string]*conn{}
+	}
+	return
+}
+
+//	Implements the `database/sql/driver.Driver.Open` interface method.
+func (me *Driver) Open(dirPath string) (_ driver.Conn, err error) {
+	var conn *conn
+	if me.connCache != nil {
+		conn, _ = me.connCache[dirPath]
+	}
+	if conn == nil {
+		conn, err = newConn(me, dirPath)
+		if me.connCache != nil {
+			me.connCache[dirPath] = conn
+		}
+	}
+	return conn, err
+}
+
+//	Returns whether connection caching was enabled for `me` via `fsdb.NewDriver`.
+//
+//	You should do so if your use-case entails many parallel go-routines concurrently
+//	operating on the same database via their own `sql.DB` connections:
+//
+//	that's because, while the standard `sql` package does provide "connection pooling",
+//	this is not sensible for `fsdb`, as each `fsdb.conn` does hold its own complete copy
+//	of data files in-memory.
+//
+//	All table writes are `sync.Mutex`-locking as necessary ONLY if connection caching is enabled.
+func (me *Driver) ConnectionCaching() bool {
+	return me.connCache != nil
+}
+
+//	Not necessary for normal use: `me` persists tables that are being
+//	written to via `insertInto`/`updateWhere`/`deleteFrom` immediately, or in
+//	a transaction context, at the next `Tx.Commit`.
+//
+//	If no `tableNames` are specifed, persists ALL tables belonging to `dbConn`,
+//	otherwise only the specified tables are persisted.
+func (me *Driver) PersistAll(dbConn driver.Conn, tableNames ...string) (err error) {
+	if c, _ := dbConn.(*conn); c != nil {
+		err = c.tables.persistAll(tableNames...)
+	} else {
+		err = errf("fsdb.PersistAll() needs a *fsdb.conn, not a %#v", dbConn)
+	}
+	return
+}
+
+//	Not necessary for normal use: `me` lazily auto-reloads tables that have been
+//	modified on disk if such a data-refresh is necessary for the current operation.
+//
+//	If no `tableNames` are specifed, reloads all tables belonging to `dbConn`.
+//
+//	In any event, the reload always includes new-on-disk table data files not
+//	previously loaded, and removes in-memory data tables no longer on disk.
+func (me *Driver) ReloadAll(dbConn driver.Conn, tableNames ...string) (err error) {
+	if c, _ := dbConn.(*conn); c != nil {
+		err = c.tables.reloadAll(tableNames...)
+	} else {
+		err = errf("fsdb.ReloadAll() needs a *fsdb.conn, not a %#v", dbConn)
+	}
+	return
+}
 
 //	A convenience short-hand. Used for actual records, as well as `where` criteria (in
 //	selectFrom, deleteFrom, updateWhere) and `set` data (in insertInto and updateWhere).
@@ -54,46 +136,6 @@ func (me M) Match(recId string, filters M, strCmp bool) (isMatch bool) {
 	return
 }
 
-type drv struct {
-	marshal   Marshal
-	unmarshal Unmarshal
-	fileExt   string
-}
-
-func NewDriver(fileExt string, marshal Marshal, unmarshal Unmarshal) (me driver.Driver) {
-	me = &drv{marshal: marshal, unmarshal: unmarshal}
-	return
-}
-
-func (me *drv) Open(dirPath string) (conn driver.Conn, err error) {
-	if connCache != nil {
-		conn, _ = connCache[dirPath]
-	}
-	if conn == nil {
-		conn, err = newConn(me, dirPath)
-		if connCache != nil {
-			connCache[dirPath] = conn
-		}
-	}
-	return
-}
-
-//	Returns whether connection caching is currently enabled, defaulting to false.
-//
-//	Connection caching can be enabled via `SetConnectionCaching(bool)`.
-//
-//	You should do so if your use-case entails many parallel go-routines concurrently
-//	operating on the same database via their own sql.DB connections:
-//
-//	that's because, while the standard `sql` package does provide "connection pooling",
-//	this is not sensible for `fsdb`, as each `fsdb.conn` does hold its own complete copy
-//	of data files in-memory.
-//
-//	Table writes are Mutex-locking as necessary if (and only if) connection caching is enabled.
-func ConnectionCaching() bool {
-	return connCache != nil
-}
-
 func interfaces(ix interface{}) (slice []interface{}) {
 	var ok bool
 	if slice, ok = ix.([]interface{}); (!ok) && ix != nil {
@@ -109,47 +151,4 @@ func m(ix interface{}) (m M) {
 		}
 	}
 	return
-}
-
-//	Not necessary for normal use: `fsdb` persists tables that are being
-//	written to via insertInto/updateWhere/deleteFrom immediately, or in
-//	a transaction context, at the next Tx.Commit().
-//
-//	If no tableNames are specifed, persists all tables belonging to dbConn,
-//	else only the specified tables are persisted.
-func PersistAll(dbConn driver.Conn, tableNames ...string) (err error) {
-	if c, _ := dbConn.(*conn); c != nil {
-		err = c.tables.persistAll(tableNames...)
-	} else {
-		err = errf("fsdb.PersistAll() needs a *fsdb.conn, not a %#v", dbConn)
-	}
-	return
-}
-
-//	Not necessary for normal use: `fsdb` lazily auto-reloads tables that have been
-//	modified on disk if such a data-refresh is necessary for the current operation.
-//
-//	If no tableNames are specifed, reloads all tables belonging to dbConn.
-//
-//	The reload includes new-on-disk table data files not previously loaded, and
-//	removes in-memory data tables no longer on disk.
-func ReloadAll(dbConn driver.Conn, tableNames ...string) (err error) {
-	if c, _ := dbConn.(*conn); c != nil {
-		err = c.tables.reloadAll(tableNames...)
-	} else {
-		err = errf("fsdb.ReloadAll() needs a *fsdb.conn, not a %#v", dbConn)
-	}
-	return
-}
-
-//	Enables or disables connection caching depending on the specified bool.
-//	For details on connection caching, see `ConnectionCaching()`.
-func SetConnectionCaching(enableCaching bool) {
-	if isEnabled := ConnectionCaching(); isEnabled != enableCaching {
-		if enableCaching {
-			connCache = map[string]driver.Conn{}
-		} else {
-			connCache = nil
-		}
-	}
 }

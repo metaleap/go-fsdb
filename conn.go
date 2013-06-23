@@ -10,13 +10,13 @@ import (
 )
 
 type conn struct {
-	drv    *drv
+	drv    *Driver
 	tx     *tx
 	dir    string
 	tables tables
 }
 
-func newConn(drv *drv, dir string) (me *conn, err error) {
+func newConn(drv *Driver, dir string) (me *conn, err error) {
 	me = &conn{drv: drv, dir: dir}
 	err = me.tables.init(me, false)
 	return
