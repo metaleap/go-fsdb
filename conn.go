@@ -53,6 +53,9 @@ func (me *conn) doCreateTable(name string) (err error) {
 			var data []byte
 			if data, err = me.drv.marshal(M{}); err == nil {
 				err = ufs.WriteBinaryFile(fp, data)
+			} else {
+				println(err.Error())
+				panic(err)
 			}
 		}
 	}

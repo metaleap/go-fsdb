@@ -1,8 +1,8 @@
-// This program demonstrates how to use the `go-fsdb` and `go-fsdb/jsondb` packages:
+// This program demonstrates how to use the `go-fsdb` and `go-fsdb/{foo}db` packages:
 //
 // It creates a new database inside the directory specified via the `-dbdir=""`
 // command-line flag, or if not present, in a new temporary directory under
-// $GOPATH/src/github.com/metaleap/go-fsdb/go-jsondb-test
+// $GOPATH/src/github.com/metaleap/go-fsdb/go-fsdb-test
 //
 // In this newly created (or overwritten) database:
 // - via `createTable`, creates 3 'tables'/collections: Customers, Products, Orders
@@ -15,6 +15,7 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -23,6 +24,7 @@ import (
 
 	fsdb "github.com/metaleap/go-fsdb"
 	fsdb_json "github.com/metaleap/go-fsdb/jsondb"
+	fsdb_toml "github.com/metaleap/go-fsdb/tomldb"
 
 	"github.com/go-utils/udb"
 	"github.com/go-utils/ufs"
@@ -30,6 +32,8 @@ import (
 )
 
 var (
+	dbDrvModes = []string{"json", "toml"}
+
 	custFirsts = []string{"Bob", "Alice", "Phil", "Edwyn", "Matt", "Rob", "Andrew", "Dave", "Kyle", "Mark"}
 	custLasts  = []string{"Dylan", "Cooper", "Collins", "Trux", "Pike", "Gerrand", "Cheney", "Isom", "Smalley"}
 	custCities = []string{"Berlin", "London", "Sydney", "Phnom Penh", "Kuala Lumpur", "Jakarta", "Taipei", "Hong Kong", "San Francisco", "San Diego", "Los Santos", "San Fierro", "Liberty City", "Vice City", "Las Venturas"}
@@ -108,14 +112,28 @@ func addOrders(tx *sql.Tx) (err error) {
 	return
 }
 
+func conn(dbDrvMode, dbDirPath string) (db *sql.DB, err error) {
+	switch dbDrvMode {
+	case "json":
+		sql.Register(fsdb_json.DriverName, fsdb_json.NewDriver(false))
+		db, err = sql.Open(fsdb_json.DriverName, dbDirPath)
+	case "toml":
+		sql.Register(fsdb_toml.DriverName, fsdb_toml.NewDriver(false))
+		db, err = sql.Open(fsdb_toml.DriverName, dbDirPath)
+	default:
+		err = fmt.Errorf("Unknown -drv flag value %#v: must be one of: %v", dbDrvMode, dbDrvModes)
+	}
+	return
+}
+
 func main() {
-	defaultDir := ugo.GopathSrcGithub("metaleap", "go-fsdb", "go-jsondb-test", "testdbs", time.Now().Format("2006-01-02_15-04-05"))
+	defaultDir := ugo.GopathSrcGithub("metaleap", "go-fsdb", "go-fsdb-test", "testdbs", time.Now().Format("2006-01-02_15-04-05"))
 	dbDirPath := flag.String("dbdir", defaultDir, "Specify the path to a DB directory. I will open or create a JSON-DB in there.")
+	dbDrvMode := flag.String("drv", dbDrvModes[0], fmt.Sprintf("Must be one of: %v.", dbDrvModes))
 	flag.Parse()
 	ufs.EnsureDirExists(*dbDirPath)
 
-	sql.Register(fsdb_json.DriverName, fsdb_json.NewDriver(false))
-	db, err := sql.Open(fsdb_json.DriverName, *dbDirPath)
+	db, err := conn(*dbDrvMode, *dbDirPath)
 	if err == nil { // panic once at the end instead of everywhere
 		log.Printf("JSON-DB location: %s", *dbDirPath)
 		defer db.Close()

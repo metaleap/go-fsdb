@@ -1,11 +1,11 @@
-# go-jsondb-test
+# go-fsdb-test
 --
-This program demonstrates how to use the `go-fsdb` and `go-fsdb/jsondb`
+This program demonstrates how to use the `go-fsdb` and `go-fsdb/{foo}db`
 packages:
 
 It creates a new database inside the directory specified via the `-dbdir=""`
 command-line flag, or if not present, in a new temporary directory under
-$GOPATH/src/github.com/metaleap/go-fsdb/go-jsondb-test
+$GOPATH/src/github.com/metaleap/go-fsdb/go-fsdb-test
 
 In this newly created (or overwritten) database: - via `createTable`, creates 3
 'tables'/collections: Customers, Products, Orders - via `insertInto`, populates
