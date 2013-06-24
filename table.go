@@ -45,12 +45,12 @@ func (me *table) fetch(where M) (recs map[string]M, err error) {
 
 func (me *table) reload(lazy bool) (err error) {
 	var fi os.FileInfo
+	defer me.UnlockIf(me.LockIf(me.shouldLock()))
 	if fi, err = os.Stat(me.filePath); err == nil && ((!lazy) || me.recs == nil || me.lastLoad.UnixNano() == 0 || (me.conn.tx == nil && fi.ModTime().UnixNano() > me.lastLoad.UnixNano())) {
 		var raw []byte
 		if raw, err = ioutil.ReadFile(me.filePath); err == nil {
 			recs := M{}
 			if err = me.conn.drv.unmarshal(raw, &recs); err == nil {
-				defer me.UnlockIf(me.LockIf(me.shouldLock()))
 				me.recs, me.lastLoad = recs, time.Now()
 			}
 		}
@@ -85,12 +85,12 @@ func (me *table) insert(rec M) (res *result, err error) {
 	if rec == nil {
 		err = errf("Cannot insert nil")
 	} else if err = me.reload(true); err == nil {
+		defer me.UnlockIf(me.LockIf(me.shouldLock()))
 		id := int64(len(me.recs))
 		sid := strf("%v", id)
 		if _, ok := me.recs[sid]; ok {
 			err = errf("Cannot insert: duplicate record ID")
 		} else {
-			defer me.UnlockIf(me.LockIf(me.shouldLock()))
 			me.recs[sid] = rec
 			if err = me.persist(); err == nil {
 				res = &result{AffectedRows: 1, InsertedLast: id}

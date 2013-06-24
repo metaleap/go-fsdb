@@ -31,10 +31,10 @@ func (me *tables) init(conn *conn, close bool) (err error) {
 }
 
 func (me *tables) get(name string) (t *table, err error) {
+	defer me.UnlockIf(me.LockIf(me.shouldLock()))
 	if t = me.all[name]; t == nil {
 		t = &table{conn: me.conn, name: name, filePath: filepath.Join(me.conn.dir, name+me.conn.drv.fileExt)}
 		if err = t.reload(true); err == nil {
-			defer me.UnlockIf(me.LockIf(me.shouldLock()))
 			me.all[t.name] = t
 		} else {
 			t = nil
