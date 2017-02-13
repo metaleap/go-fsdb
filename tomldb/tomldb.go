@@ -6,8 +6,8 @@ package tomldb
 import (
 	"database/sql/driver"
 
-	"github.com/go-forks/toml"
-	"github.com/go-utils/ustr"
+	"github.com/BurntSushi/toml"
+	"github.com/metaleap/go-util-str"
 	"github.com/metaleap/go-fsdb"
 )
 

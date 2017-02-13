@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 	"io"
 
-	"github.com/go-utils/uslice"
+	"github.com/metaleap/go-util-slice"
 )
 
 type result struct {

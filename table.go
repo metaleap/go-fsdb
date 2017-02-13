@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-utils/ufs"
-	"github.com/go-utils/ugo"
+	"github.com/metaleap/go-util-fs"
+	"github.com/metaleap/go-util-misc"
 )
 
 type table struct {

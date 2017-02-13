@@ -3,7 +3,7 @@ package fsdb
 import (
 	"database/sql/driver"
 
-	"github.com/go-utils/ugo"
+	"github.com/metaleap/go-util-misc"
 )
 
 const (

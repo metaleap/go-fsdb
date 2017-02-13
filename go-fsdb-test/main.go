@@ -26,9 +26,9 @@ import (
 	fsdb_json "github.com/metaleap/go-fsdb/jsondb"
 	fsdb_toml "github.com/metaleap/go-fsdb/tomldb"
 
-	"github.com/go-utils/udb"
-	"github.com/go-utils/ufs"
-	"github.com/go-utils/ugo"
+	"github.com/metaleap/go-util-db"
+	"github.com/metaleap/go-util-fs"
+	"github.com/metaleap/go-util-misc"
 )
 
 var (
