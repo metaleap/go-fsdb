@@ -3,12 +3,12 @@ package fsdb
 import (
 	"path/filepath"
 
-	"github.com/metaleap/go-util-misc"
-	"github.com/metaleap/go-util-slice"
+	"github.com/metaleap/go-util/run"
+	"github.com/metaleap/go-util/slice"
 )
 
 type tables struct {
-	ugo.MutexIf
+	urun.MutexIf
 	conn *conn
 	all  map[string]*table
 }

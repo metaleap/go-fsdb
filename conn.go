@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/metaleap/go-util-fs"
+	"github.com/metaleap/go-util/fs"
 )
 
 type conn struct {

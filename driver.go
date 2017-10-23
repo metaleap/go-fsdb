@@ -3,7 +3,7 @@ package fsdb
 import (
 	"database/sql/driver"
 
-	"github.com/metaleap/go-util-misc"
+	"github.com/metaleap/go-util"
 )
 
 const (
@@ -94,7 +94,7 @@ func (me M) Match(recId string, filters M, strCmp bool) (isMatch bool) {
 	}
 	for fn, fx := range filters {
 		if fn != IdField || len(recId) > 0 {
-			if !matchAny(fn, ugo.Ifx(fn == IdField, recId, me[fn]), interfaces(fx)) {
+			if !matchAny(fn, umisc.IfX(fn == IdField, recId, me[fn]), interfaces(fx)) {
 				return
 			}
 		}

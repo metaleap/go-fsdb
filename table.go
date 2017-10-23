@@ -5,12 +5,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/metaleap/go-util-fs"
-	"github.com/metaleap/go-util-misc"
+	"github.com/metaleap/go-util/fs"
+	"github.com/metaleap/go-util/run"
 )
 
 type table struct {
-	ugo.MutexIf
+	urun.MutexIf
 	conn           *conn
 	lastLoad       time.Time
 	name, filePath string

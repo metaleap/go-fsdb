@@ -7,8 +7,8 @@ import (
 	"database/sql/driver"
 
 	"github.com/go-forks/toml"
-	"github.com/metaleap/go-util-str"
 	"github.com/metaleap/go-fsdb"
+	"github.com/metaleap/go-util/str"
 )
 
 var (

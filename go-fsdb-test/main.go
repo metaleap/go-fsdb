@@ -26,9 +26,9 @@ import (
 	fsdb_json "github.com/metaleap/go-fsdb/jsondb"
 	fsdb_toml "github.com/metaleap/go-fsdb/tomldb"
 
-	"github.com/metaleap/go-util-db"
-	"github.com/metaleap/go-util-fs"
-	"github.com/metaleap/go-util-misc"
+	"github.com/metaleap/go-util/db"
+	"github.com/metaleap/go-util/dev/go"
+	"github.com/metaleap/go-util/fs"
 )
 
 var (
@@ -127,7 +127,7 @@ func conn(dbDrvMode, dbDirPath string) (db *sql.DB, err error) {
 }
 
 func main() {
-	defaultDir := ugo.GopathSrcGithub("metaleap", "go-fsdb", "go-fsdb-test", "testdbs", time.Now().Format("2006-01-02_15-04-05"))
+	defaultDir := udevgo.GopathSrcGithub("metaleap", "go-fsdb", "go-fsdb-test", "testdbs", time.Now().Format("2006-01-02_15-04-05"))
 	dbDirPath := flag.String("dbdir", defaultDir, "Specify the path to a DB directory. I will open or create a JSON-DB in there.")
 	dbDrvMode := flag.String("drv", dbDrvModes[0], fmt.Sprintf("Must be one of: %v.", dbDrvModes))
 	flag.Parse()
